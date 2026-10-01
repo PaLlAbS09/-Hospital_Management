@@ -13,7 +13,7 @@
     </button>
 
     <a href="{{ route('home') }}" class="hms-brand">
-        <span class="hms-brand__mark"><i class="bi bi-heart-pulse-fill"></i></span>
+        <x-brand-logo />
         <span class="hms-brand__text">
             {{ config('app.name') }}
             <small>{{ \App\Support\Navigation::label($guard ?? '') }} Portal</small>

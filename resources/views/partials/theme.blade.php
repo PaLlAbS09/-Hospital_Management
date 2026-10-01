@@ -56,6 +56,20 @@
         flex: 0 0 auto;
     }
 
+    .hms-brand__mark--logo {
+        background: none;
+        box-shadow: none;
+        padding: 0;
+    }
+
+    .hms-brand__mark--logo img {
+        width: 40px;
+        height: 40px;
+        border-radius: 13px;
+        display: block;
+        box-shadow: 0 10px 22px -8px rgba(99, 102, 241, .7);
+    }
+
     .hms-brand__text { line-height: 1.05; font-size: 1.02rem; }
     .hms-brand__text small {
         display: block;

@@ -82,7 +82,7 @@
 
         <div class="rx-sheet">
             <header class="rx-head d-flex align-items-center gap-3">
-                <span class="rx-head__mark"><i class="bi bi-heart-pulse-fill"></i></span>
+                <x-brand-logo />
                 <div class="flex-grow-1">
                     <div class="fw-bold fs-5">{{ config('app.name') }}</div>
                     <div class="small" style="opacity: .75">Clinic &middot; Doctor &middot; Patient prescription record</div>

@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>@yield('title', 'Sign In') &middot; {{ config('app.name') }}</title>
 
+    <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}">
+    <link rel="apple-touch-icon" href="{{ asset('favicon.svg') }}">
+
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -17,7 +20,7 @@
 <header class="bg-white border-bottom">
     <div class="container py-3 d-flex align-items-center justify-content-between">
         <a href="{{ route('home') }}" class="hms-brand">
-            <span class="hms-brand__mark"><i class="bi bi-heart-pulse-fill"></i></span>
+            <x-brand-logo />
             <span class="hms-brand__text">
                 {{ config('app.name') }}
                 <small>Healthcare Portal</small>

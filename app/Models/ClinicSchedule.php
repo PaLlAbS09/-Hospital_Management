@@ -6,24 +6,14 @@ use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
-/**
- * Maps to the existing `clinic_schedules` table.
- *
- * Columns: schedule_id, clinic_id, doctor_id, schedule_date,
- *          start_time, end_time, patient_capacity
- *
- * The table has no timestamp columns, therefore timestamps are disabled.
- */
 class ClinicSchedule extends Model
 {
-    /** Default slot length in minutes used when generating bookable times. */
     public const SLOT_MINUTES = 30;
 
     protected $table = 'clinic_schedules';
 
     protected $primaryKey = 'schedule_id';
 
-    /** The `clinic_schedules` table has no created_at / updated_at columns. */
     public $timestamps = false;
 
     protected $fillable = [
@@ -76,23 +66,65 @@ class ClinicSchedule extends Model
      | ------------------------------------------------------------------- */
 
     /** Normalise MySQL TIME values ("09:30:00" / "09:30") into "H:i". */
-    public static function normalizeTime(?string $time): ?string
+    public static function normalizeTime(mixed $time): ?string
     {
-        return filled($time) ? Carbon::parse($time)->format('H:i') : null;
+        if (! filled($time)) {
+            return null;
+        }
+
+        if ($time instanceof Carbon) {
+            return $time->format('H:i');
+        }
+
+        $timeString = trim((string) $time);
+
+        // If a full datetime slipped in (e.g. "2026-10-02 12:00:00"), keep only the time part
+        // so Carbon never sees a double time specification.
+        if (strlen($timeString) > 8 && preg_match('/(\d{1,2}:\d{2}(?::\d{2})?)\s*$/', $timeString, $matches) === 1) {
+            $timeString = $matches[1];
+        } else {
+            $timeString = substr($timeString, 0, 5);
+        }
+
+        return Carbon::parse($timeString)->format('H:i');
+    }
+
+    /** Build "Y-m-d H:i:s" safely even when Eloquent casts give us Carbon instances. */
+    private function buildDateTime(mixed $date, mixed $time): Carbon
+    {
+        $dateString = $date instanceof Carbon
+            ? $date->toDateString()
+            : substr(trim((string) $date), 0, 10);
+
+        if ($time instanceof Carbon) {
+            $timeString = $time->format('H:i:s');
+        } else {
+            $timeString = trim((string) $time);
+            // If a full datetime slipped in (e.g. "2026-10-02 12:00:00"), keep only the time part.
+            if (strlen($timeString) > 8 && preg_match('/(\d{1,2}:\d{2}(?::\d{2})?)\s*$/', $timeString, $matches) === 1) {
+                $timeString = $matches[1];
+            }
+        }
+
+        return Carbon::parse($dateString.' '.$timeString);
     }
 
     public function getStartAtAttribute(): ?Carbon
     {
-        return filled($this->start_time)
-            ? Carbon::parse($this->schedule_date.' '.$this->start_time)
-            : null;
+        if (! filled($this->start_time) || ! filled($this->schedule_date)) {
+            return null;
+        }
+
+        return $this->buildDateTime($this->schedule_date, $this->start_time);
     }
 
     public function getEndAtAttribute(): ?Carbon
     {
-        return filled($this->end_time)
-            ? Carbon::parse($this->schedule_date.' '.$this->end_time)
-            : null;
+        if (! filled($this->end_time) || ! filled($this->schedule_date)) {
+            return null;
+        }
+
+        return $this->buildDateTime($this->schedule_date, $this->end_time);
     }
 
     public function getTimeRangeAttribute(): string
