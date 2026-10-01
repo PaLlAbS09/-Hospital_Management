@@ -1,0 +1,42 @@
+﻿PHPUnit 12.5.37 by Sebastian Bergmann and contributors.
+
+Runtime:       PHP 8.5.9
+Configuration: C:\Users\sarka\OneDrive\Documents\Default Project\hospital-management\phpunit.xml
+
+
+  [30;43;1m WARN [39;49;22m[39m Tests\Feature\PublicPagesTest[39m
+  [33;1m![39;22m[90m [39m[90mlanding page loads[39m[90m [39m[33mΓåÆ Test code or tested code did not close its own output buffers[39m[90m                          [39m [90m0.53s[39m  
+  [32;1mΓ£ô[39;22m[90m [39m[90mclinic directory loads[39m[90m                                                                                      [39m [90m0.03s[39m  
+  [32;1mΓ£ô[39;22m[90m [39m[90mcontact form stores query[39m[90m                                                                                   [39m [90m0.06s[39m  
+  [32;1mΓ£ô[39;22m[90m [39m[90mcontact form rejects invalid payload[39m[90m                                                                        [39m [90m0.04s[39m  
+  [32;1mΓ£ô[39;22m[90m [39m[90monly approved clinics are listed publicly[39m[90m                                                                   [39m [90m0.04s[39m  
+  [32;1mΓ£ô[39;22m[90m [39m[90madmin login screen loads[39m[90m                                                                                    [39m [90m0.03s[39m  
+  [32;1mΓ£ô[39;22m[90m [39m[90mpatient registration screen loads[39m[90m                                                                           [39m [90m0.03s[39m  
+  [32;1mΓ£ô[39;22m[90m [39m[90mguest cannot reach admin dashboard[39m[90m                                                                          [39m [90m0.03s[39m  
+  [32;1mΓ£ô[39;22m[90m [39m[90madmin can login and reach dashboard[39m[90m                                                                         [39m [90m0.05s[39m  
+
+  [90mTests:[39m    [33;1m1 risky[39;22m[90m,[39m[39m [39m[32;1m8 passed[39;22m[90m (21 assertions)[39m
+  [90mDuration:[39m [39m1.38s[39m
+
+Time: 00:00.842, Memory: 54.00 MB
+
+[4mPublic Pages (Tests\Feature\PublicPages)[0m
+[33m ΓÜá [0mLanding page loads
+[32m Γ£ö [0mClinic directory loads
+[32m Γ£ö [0mContact form stores query
+[32m Γ£ö [0mContact form rejects invalid payload
+[32m Γ£ö [0mOnly approved clinics are listed publicly
+[32m Γ£ö [0mAdmin login screen loads
+[32m Γ£ö [0mPatient registration screen loads
+[32m Γ£ö [0mGuest cannot reach admin dashboard
+[32m Γ£ö [0mAdmin can login and reach dashboard
+
+There was 1 risky test:
+
+1) Tests\Feature\PublicPagesTest::test_landing_page_loads
+Test code or tested code did not close its own output buffers
+
+C:\Users\sarka\OneDrive\Documents\Default Project\hospital-management\tests\Feature\PublicPagesTest.php:25
+
+[30;43mOK, but there were issues![0m
+[30;43mTests: 9[0m[30;43m, Assertions: 21[0m[30;43m, Risky: 1[0m[30;43m.[0m

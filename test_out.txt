@@ -1,0 +1,26 @@
+﻿
+  [33;1m![39;22m[90;1m.[39;22m[31;1mΓ¿»[39;22m[90;1m.[39;22m[90;1m.[39;22m[90;1m.[39;22m[90;1m.[39;22m[90;1m.[39;22m[90;1m.[39;22m
+  [31mΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ[39m  
+  [41;1m FAILED [49;22m [1mTests\Feature\PublicPagesTest[22m [90m>[39m contact form stores query                                                    
+[39;1m  Failed asserting that two strings are equal.
+--- Expected
++++ Actual
+@@ @@
+-'http://localhost:8000'
++'http://localhost:8000#contact'[39;22m
+
+  at [32mtests\Feature\PublicPagesTest.php[39m:[32m42[39m
+     38Γûò             'user_name' => 'Jane Visitor',
+     39Γûò             'email' => 'jane@example.com',
+     40Γûò             'contact_number' => '9876543210',
+     41Γûò             'message' => 'I would like to know more about the clinic network.',
+  Γ₧£  42Γûò         ])->assertRedirect(route('home'));
+     43Γûò 
+     44Γûò         $this->assertDatabaseHas('system_queries', [
+     45Γûò             'email' => 'jane@example.com',
+     46Γûò             'user_name' => 'Jane Visitor',
+
+
+  [90mTests:[39m    [31;1m1 failed[39;22m[90m,[39m[39m [39m[33;1m1 risky[39;22m[90m,[39m[39m [39m[32;1m7 passed[39;22m[90m (19 assertions)[39m
+  [90mDuration:[39m [39m9.85s[39m
+

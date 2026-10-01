@@ -1,0 +1,4 @@
+﻿app\Http\Controllers\AdminController.php:37: 'completedAppointments' => Appointment::status(Appointment::STATUS_COMPLETED)->count(),
+app\Http\Controllers\ClinicController.php:99: 'completed' => $clinic->appointments()->status(Appointment::STATUS_COMPLETED)->count(),
+app\Http\Controllers\DoctorController.php:47: 'completed' => $doctor->appointments()->status(Appointment::STATUS_COMPLETED)->count(),
+
