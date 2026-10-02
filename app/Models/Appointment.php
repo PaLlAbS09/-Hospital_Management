@@ -2,20 +2,26 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Schema;
 
-/**
- * Maps to the existing `appointments` table.
- *
- * Columns: appointment_id, patient_id, clinic_id, doctor_id,
- *          appointment_date, appointment_time, status, disease,
- *          allergies, prescription_details
- *
- * The table has no timestamp columns, therefore timestamps are disabled.
- */
 class Appointment extends Model
 {
+    use HasFactory;
+
+    public static function hasDatabaseColumn(string $column): bool
+    {
+        try {
+            return Schema::hasColumn('appointments', $column);
+        } catch (\Throwable $exception) {
+            return false;
+        }
+    }
+
     public const STATUS_ACTIVE = 'Active';
 
     public const STATUS_CANCELLED_BY_PATIENT = 'Cancelled_by_Patient';
@@ -23,6 +29,8 @@ class Appointment extends Model
     public const STATUS_CANCELLED_BY_DOCTOR = 'Cancelled_by_Doctor';
 
     public const STATUS_COMPLETED = 'Completed';
+
+    public const STATUS_NO_SHOW = 'No_Show';
 
     protected $table = 'appointments';
 
@@ -35,9 +43,11 @@ class Appointment extends Model
         'patient_id',
         'clinic_id',
         'doctor_id',
+        'contact_phone',
         'appointment_date',
         'appointment_time',
         'status',
+        'checked_in_at',
         'disease',
         'allergies',
         'prescription_details',
@@ -54,12 +64,9 @@ class Appointment extends Model
     {
         return [
             'appointment_date' => 'date',
+            'checked_in_at' => 'datetime',
         ];
     }
-
-    /* ---------------------------------------------------------------------
-     | Status helpers
-     | ------------------------------------------------------------------- */
 
     /**
      * @return array<string, string>
@@ -71,6 +78,19 @@ class Appointment extends Model
             self::STATUS_COMPLETED => 'Completed',
             self::STATUS_CANCELLED_BY_PATIENT => 'Cancelled by Patient',
             self::STATUS_CANCELLED_BY_DOCTOR => 'Cancelled by Doctor',
+            self::STATUS_NO_SHOW => 'No Show (auto-cancelled)',
+        ];
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    public static function cancelledStatuses(): array
+    {
+        return [
+            self::STATUS_CANCELLED_BY_PATIENT,
+            self::STATUS_CANCELLED_BY_DOCTOR,
+            self::STATUS_NO_SHOW,
         ];
     }
 
@@ -82,6 +102,7 @@ class Appointment extends Model
             self::STATUS_COMPLETED => 'success',
             self::STATUS_CANCELLED_BY_PATIENT => 'warning',
             self::STATUS_CANCELLED_BY_DOCTOR => 'danger',
+            self::STATUS_NO_SHOW => 'dark',
             default => 'secondary',
         };
     }
@@ -101,6 +122,16 @@ class Appointment extends Model
         return $this->status === self::STATUS_COMPLETED;
     }
 
+    public function getIsCancelledAttribute(): bool
+    {
+        return in_array($this->status, self::cancelledStatuses(), true);
+    }
+
+    public function getIsCheckedInAttribute(): bool
+    {
+        return static::hasDatabaseColumn('checked_in_at') && filled($this->checked_in_at);
+    }
+
     public function getHasPrescriptionAttribute(): bool
     {
         return filled($this->prescription_details)
@@ -114,6 +145,40 @@ class Appointment extends Model
         return filled($this->appointment_time)
             ? substr((string) $this->appointment_time, 0, 5)
             : '--:--';
+    }
+
+    /**
+     * Phone number captured with this booking, falling back to the number on the
+     * patient's profile. Returns null when no number is available at all, which
+     * keeps the SMS channel from firing for patients we cannot reach.
+     */
+    public function getNotificationPhoneAttribute(): ?string
+    {
+        $phone = static::hasDatabaseColumn('contact_phone')
+            ? $this->contact_phone
+            : null;
+
+        if (blank($phone)) {
+            $phone = $this->patient?->contact;
+        }
+
+        return filled($phone) ? (string) $phone : null;
+    }
+
+    /** Combined appointment start used for no-show detection. */
+    public function getStartsAtAttribute(): ?CarbonInterface
+    {
+        if (! filled($this->appointment_date) || ! filled($this->appointment_time)) {
+            return null;
+        }
+
+        try {
+            return Carbon::parse(
+                $this->appointment_date->toDateString().' '.substr((string) $this->appointment_time, 0, 8)
+            );
+        } catch (\Throwable $exception) {
+            return null;
+        }
     }
 
     /* ---------------------------------------------------------------------
@@ -159,6 +224,29 @@ class Appointment extends Model
             self::STATUS_ACTIVE,
             self::STATUS_COMPLETED,
         ]);
+    }
+
+    public function scopeCancelled(Builder $query): Builder
+    {
+        return $query->whereIn('status', self::cancelledStatuses());
+    }
+
+    public function scopeCheckedIn(Builder $query): Builder
+    {
+        if (! static::hasDatabaseColumn('checked_in_at')) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        return $query->whereNotNull('checked_in_at');
+    }
+
+    public function scopeNotCheckedIn(Builder $query): Builder
+    {
+        if (! static::hasDatabaseColumn('checked_in_at')) {
+            return $query;
+        }
+
+        return $query->whereNull('checked_in_at');
     }
 
     public function scopeForDoctor(Builder $query, int $doctorId): Builder

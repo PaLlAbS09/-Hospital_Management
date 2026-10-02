@@ -3,6 +3,8 @@
 namespace App\Notifications;
 
 use App\Models\Appointment;
+use App\Notifications\Channels\SmsChannel;
+use App\Support\Sms\SmsMessage;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -14,12 +16,13 @@ class AppointmentConfirmed extends Notification implements ShouldQueue
 
     public function __construct(public Appointment $appointment) {}
 
-    /**
-     * @return array<int, string>
-     */
+    // SMS is attempted before mail because it can never throw (the channel
+    // swallows gateway errors). Laravel aborts the channel loop on the first
+    // exception, so putting mail first would mean a broken SMTP server also
+    // suppresses the SMS.
     public function via(object $notifiable): array
     {
-        return ['mail', 'database'];
+        return [SmsChannel::class, 'mail', 'database'];
     }
 
     public function toMail(object $notifiable): MailMessage
@@ -31,6 +34,7 @@ class AppointmentConfirmed extends Notification implements ShouldQueue
             ->greeting('Hello '.$appointment->patient->full_name.',')
             ->line('Your appointment with Dr. '.$appointment->doctor->full_name.' at '.$appointment->clinic->clinic_name.' is confirmed.')
             ->line('Date: '.$appointment->appointment_date->format('d M Y').' at '.$appointment->formatted_time.'.')
+            ->line('Contact phone for this booking: '.($appointment->notification_phone ?? '—').'.')
             ->action('View my appointments', route('patient.dashboard'))
             ->line('Please arrive 15 minutes early.');
     }
@@ -46,6 +50,27 @@ class AppointmentConfirmed extends Notification implements ShouldQueue
             'doctor' => $this->appointment->doctor->full_name,
             'date' => $this->appointment->appointment_date->toDateString(),
             'time' => $this->appointment->formatted_time,
+            'contact_phone' => $this->appointment->notification_phone,
         ];
+    }
+
+    /**
+     * SMS confirmation of the booked slot.
+     */
+    public function toSms(object $notifiable): ?SmsMessage
+    {
+        $appointment = $this->appointment;
+
+        return new SmsMessage(
+            $appointment->notification_phone ?? '',
+            sprintf(
+                config('app.name').': your appointment with Dr. %s at %s is confirmed for %s at %s. Contact phone on file: %s.',
+                $appointment->doctor->full_name,
+                $appointment->clinic->clinic_name,
+                $appointment->appointment_date->format('d M Y'),
+                $appointment->formatted_time,
+                $appointment->notification_phone ?? '—'
+            )
+        );
     }
 }

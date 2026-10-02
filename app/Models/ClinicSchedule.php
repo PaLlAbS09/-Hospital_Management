@@ -4,10 +4,13 @@ namespace App\Models;
 
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class ClinicSchedule extends Model
 {
+    use HasFactory;
+
     public const SLOT_MINUTES = 30;
 
     protected $table = 'clinic_schedules';

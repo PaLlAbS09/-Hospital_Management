@@ -50,6 +50,22 @@
                             </label>
                         @endforeach
                     </div>
+                    @error('appointment_time')
+                        <div class="text-danger small mb-2">{{ $message }}</div>
+                    @enderror
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small" for="contact_phone_{{ $schedule->schedule_id }}">
+                            Phone number for this booking
+                        </label>
+                        <input type="text" class="form-control @error('contact_phone') is-invalid @enderror"
+                               id="contact_phone_{{ $schedule->schedule_id }}" name="contact_phone"
+                               value="{{ old('contact_phone') }}" placeholder="Digits only, 7-15 characters">
+                        <div class="form-text">A confirmation SMS is sent to this number and an email to your registered email ID.</div>
+                        @error('contact_phone')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
 
                     <button type="submit" class="btn btn-hms w-100">
                         <i class="bi bi-calendar-check me-1"></i>Book appointment with

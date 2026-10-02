@@ -2,10 +2,15 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as AuthUser;
+use Illuminate\Notifications\Notifiable;
 
 class Patient extends AuthUser
 {
+    use HasFactory;
+    use Notifiable;
+
     protected $table = 'patients';
 
     protected $primaryKey = 'patient_id';

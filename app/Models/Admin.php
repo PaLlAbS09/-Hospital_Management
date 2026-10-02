@@ -3,10 +3,12 @@
 namespace App\Models;
 
 use Illuminate\Foundation\Auth\User as AuthUser;
-
+use Illuminate\Notifications\Notifiable;
 
 class Admin extends AuthUser
 {
+    use Notifiable;
+
     protected $table = 'admin';
 
     protected $primaryKey = 'id';
@@ -24,7 +26,6 @@ class Admin extends AuthUser
         'remember_token',
     ];
 
-   
     public function getDisplayNameAttribute(): string
     {
         $name = $this->attributes['name'] ?? null;
@@ -34,13 +35,11 @@ class Admin extends AuthUser
             : str((string) $this->email)->before('@')->headline()->toString();
     }
 
-   
     public function getNameAttribute($value): string
     {
         return filled($value) ? (string) $value : $this->getDisplayNameAttribute();
     }
 
-    
     public function getInitialsAttribute(): string
     {
         $parts = preg_split('/\s+/', trim($this->getDisplayNameAttribute())) ?: [];

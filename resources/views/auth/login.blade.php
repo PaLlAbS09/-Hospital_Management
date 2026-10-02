@@ -64,6 +64,12 @@
                         </div>
                     </div>
 
+                    <div class="text-end mb-3">
+                        <a href="{{ route($role.'.password.request') }}" class="small text-decoration-none">
+                            <i class="bi bi-question-circle me-1"></i>Forgot password?
+                        </a>
+                    </div>
+
                     <button type="submit" class="btn btn-hms w-100 py-2">
                         <i class="bi bi-box-arrow-in-right me-1"></i>Sign in as {{ $meta['label'] }}
                     </button>

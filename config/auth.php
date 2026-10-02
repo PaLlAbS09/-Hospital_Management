@@ -1,5 +1,11 @@
 <?php
 
+use App\Models\Admin;
+use App\Models\Clinic;
+use App\Models\Doctor;
+use App\Models\Patient;
+use App\Models\User;
+
 return [
 
     /*
@@ -83,27 +89,27 @@ return [
 
         'admins' => [
             'driver' => 'eloquent',
-            'model' => App\Models\Admin::class,
+            'model' => Admin::class,
         ],
 
         'clinics' => [
             'driver' => 'eloquent',
-            'model' => App\Models\Clinic::class,
+            'model' => Clinic::class,
         ],
 
         'doctors' => [
             'driver' => 'eloquent',
-            'model' => App\Models\Doctor::class,
+            'model' => Doctor::class,
         ],
 
         'patients' => [
             'driver' => 'eloquent',
-            'model' => App\Models\Patient::class,
+            'model' => Patient::class,
         ],
 
         'users' => [
             'driver' => 'eloquent',
-            'model' => App\Models\User::class,
+            'model' => User::class,
         ],
 
     ],
@@ -128,6 +134,37 @@ return [
     */
 
     'passwords' => [
+
+        // One broker per role guard. Every broker resolves its own user provider
+        // but they deliberately share a single token table, which is why the
+        // brokers are named after the guards rather than after the tables.
+        'admins' => [
+            'provider' => 'admins',
+            'table' => env('AUTH_PASSWORD_RESET_TOKEN_TABLE', 'password_reset_tokens'),
+            'expire' => 60,
+            'throttle' => 60,
+        ],
+
+        'clinics' => [
+            'provider' => 'clinics',
+            'table' => env('AUTH_PASSWORD_RESET_TOKEN_TABLE', 'password_reset_tokens'),
+            'expire' => 60,
+            'throttle' => 60,
+        ],
+
+        'doctors' => [
+            'provider' => 'doctors',
+            'table' => env('AUTH_PASSWORD_RESET_TOKEN_TABLE', 'password_reset_tokens'),
+            'expire' => 60,
+            'throttle' => 60,
+        ],
+
+        'patients' => [
+            'provider' => 'patients',
+            'table' => env('AUTH_PASSWORD_RESET_TOKEN_TABLE', 'password_reset_tokens'),
+            'expire' => 60,
+            'throttle' => 60,
+        ],
 
         'users' => [
             'provider' => 'users',

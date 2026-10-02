@@ -85,9 +85,11 @@ return new class extends Migration
                 $table->unsignedInteger('patient_id');
                 $table->unsignedInteger('clinic_id');
                 $table->unsignedInteger('doctor_id');
+                $table->string('contact_phone', 15)->nullable();
                 $table->date('appointment_date');
                 $table->time('appointment_time');
                 $table->string('status', 30)->default('Active');
+                $table->timestamp('checked_in_at')->nullable();
                 $table->string('disease')->nullable();
                 $table->string('allergies')->nullable();
                 $table->text('prescription_details')->nullable();
@@ -97,6 +99,18 @@ return new class extends Migration
                 $table->foreign('doctor_id')->references('doctor_id')->on('doctors')->cascadeOnDelete();
             });
         }
+
+        // Bring pre-existing installs up to date without failing if the
+        // attendance migration has not run yet.
+        Schema::table('appointments', function (Blueprint $table) {
+            if (! Schema::hasColumn('appointments', 'contact_phone')) {
+                $table->string('contact_phone', 15)->nullable()->after('doctor_id');
+            }
+
+            if (! Schema::hasColumn('appointments', 'checked_in_at')) {
+                $table->timestamp('checked_in_at')->nullable()->after('status');
+            }
+        });
 
         if (! Schema::hasTable('doctor_session_logs')) {
             Schema::create('doctor_session_logs', function (Blueprint $table) {

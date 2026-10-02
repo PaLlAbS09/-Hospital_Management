@@ -9,15 +9,17 @@ use App\Models\Doctor;
 use App\Models\DoctorSessionLog;
 use App\Models\Patient;
 use App\Models\SystemQuery;
+use App\Notifications\ClinicApproved;
+use App\Services\AppointmentBookingException;
+use App\Services\AppointmentBookingService;
+use App\Support\Notifier;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\View\View;
 
-
 class AdminController extends Controller
 {
-
     public function dashboard(): View
     {
         $stats = [
@@ -30,6 +32,7 @@ class AdminController extends Controller
             'appointments' => Appointment::count(),
             'activeAppointments' => Appointment::active()->count(),
             'completedAppointments' => Appointment::status(Appointment::STATUS_COMPLETED)->count(),
+            'noShowAppointments' => Appointment::status(Appointment::STATUS_NO_SHOW)->count(),
             'todayAppointments' => Appointment::onDate(today()->toDateString())->count(),
             'activeQueries' => SystemQuery::recent()->count(),
             'doctorsOnline' => DoctorSessionLog::open()->count(),
@@ -91,7 +94,10 @@ class AdminController extends Controller
     {
         $clinic->update(['status' => Clinic::STATUS_APPROVED]);
 
-        return back()->with('success', $clinic->clinic_name.' has been approved. The clinic can now sign in.');
+        $emailSent = Notifier::send($clinic, new ClinicApproved($clinic));
+
+        return back()->with('success', $clinic->clinic_name.' has been approved. The clinic can now sign in.'
+            .($emailSent ? '' : ' (The approval email could not be delivered.)'));
     }
 
     public function rejectClinic(Clinic $clinic): RedirectResponse
@@ -100,8 +106,6 @@ class AdminController extends Controller
 
         return back()->with('success', $clinic->clinic_name.' has been rejected.');
     }
-
- 
 
     public function doctors(Request $request): View
     {
@@ -146,13 +150,11 @@ class AdminController extends Controller
 
         $name = $doctor->full_name;
 
-    
         $doctor->sessionLogs()->delete();
         $doctor->delete();
 
         return back()->with('success', 'Dr. '.$name.' has been deleted.');
     }
-
 
     public function patients(Request $request): View
     {
@@ -184,10 +186,8 @@ class AdminController extends Controller
                 'total' => $appointments->count(),
                 'active' => $appointments->where('status', Appointment::STATUS_ACTIVE)->count(),
                 'completed' => $appointments->where('status', Appointment::STATUS_COMPLETED)->count(),
-                'cancelled' => $appointments->whereIn('status', [
-                    Appointment::STATUS_CANCELLED_BY_PATIENT,
-                    Appointment::STATUS_CANCELLED_BY_DOCTOR,
-                ])->count(),
+                'noShow' => $appointments->where('status', Appointment::STATUS_NO_SHOW)->count(),
+                'cancelled' => $appointments->whereIn('status', Appointment::cancelledStatuses())->count(),
             ],
         ]);
     }
@@ -197,11 +197,14 @@ class AdminController extends Controller
         $status = $request->string('status')->trim()->toString();
         $date = $request->string('date')->trim()->toString();
         $search = $request->string('search')->trim()->toString();
+        $attendance = $request->string('attendance')->trim()->toString();
 
         $appointments = Appointment::query()
             ->with(['patient', 'doctor', 'clinic'])
             ->when(filled($status), fn ($q) => $q->where('status', $status))
             ->when(filled($date), fn ($q) => $q->whereDate('appointment_date', $date))
+            ->when($attendance === 'arrived', fn ($q) => $q->checkedIn())
+            ->when($attendance === 'not_arrived', fn ($q) => $q->notCheckedIn())
             ->search($search)
             ->orderByDesc('appointment_date')
             ->orderByDesc('appointment_time')
@@ -213,11 +216,38 @@ class AdminController extends Controller
             'status' => $status,
             'date' => $date,
             'search' => $search,
+            'attendance' => $attendance,
             'statuses' => Appointment::statuses(),
         ]);
     }
 
-   
+    /**
+     * Mark patient arrival from the admin / reception desk.
+     */
+    public function checkInAppointment(Appointment $appointment, AppointmentBookingService $bookings): RedirectResponse
+    {
+        try {
+            $bookings->checkIn($appointment);
+        } catch (AppointmentBookingException $exception) {
+            return back()->with('error', $exception->getMessage());
+        }
+
+        return back()->with('success', 'Patient marked as arrived for '.$appointment->appointment_date->format('d M Y').' at '.$appointment->formatted_time.'.');
+    }
+
+    /**
+     * Manually trigger the no-show sweep (admin / reception desk).
+     */
+    public function cancelNoShows(AppointmentBookingService $bookings): RedirectResponse
+    {
+        if (! Appointment::hasDatabaseColumn('checked_in_at')) {
+            return back()->with('error', 'Arrival tracking columns are missing. Please run `php artisan migrate --force` and try again.');
+        }
+
+        $count = $bookings->cancelExpiredNoShows();
+
+        return back()->with('success', "Checked slot times: {$count} no-show appointment(s) auto-cancelled and emailed.");
+    }
 
     public function sessionLogs(Request $request): View
     {
@@ -237,8 +267,6 @@ class AdminController extends Controller
             'openSessions' => DoctorSessionLog::open()->count(),
         ]);
     }
-
-
 
     public function queries(Request $request): View
     {

@@ -24,6 +24,8 @@ class AppointmentFactory extends Factory
             'appointment_date' => today()->addDays($this->faker->numberBetween(0, 14))->toDateString(),
             'appointment_time' => $this->faker->randomElement(['09:00', '09:30', '10:00', '11:00', '16:00']),
             'status' => Appointment::STATUS_ACTIVE,
+            'contact_phone' => $this->faker->numerify('9#########'),
+            'checked_in_at' => null,
             'disease' => null,
             'allergies' => null,
             'prescription_details' => null,

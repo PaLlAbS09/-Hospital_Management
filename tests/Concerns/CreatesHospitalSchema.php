@@ -5,17 +5,15 @@ namespace Tests\Concerns;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-/**
- * Creates an in-memory mirror of the existing `hospital_management`
- * MySQL schema for feature tests.
- *
- * The production database already exists and must never be re-migrated,
- * so tests build these tables on the sqlite :memory: connection instead.
- */
 trait CreatesHospitalSchema
 {
     protected function createHospitalSchema(): void
     {
+
+        if (Schema::hasTable('admin')) {
+            return;
+        }
+
         Schema::create('admin', function (Blueprint $table) {
             $table->id();
             $table->string('name')->nullable();
@@ -72,10 +70,12 @@ trait CreatesHospitalSchema
             $table->unsignedInteger('patient_id');
             $table->unsignedInteger('clinic_id');
             $table->unsignedInteger('doctor_id');
+            $table->string('contact_phone', 15)->nullable();
             $table->date('appointment_date');
             $table->time('appointment_time');
-            $table->enum('status', ['Active', 'Cancelled_by_Patient', 'Cancelled_by_Doctor', 'Completed'])
+            $table->enum('status', ['Active', 'Cancelled_by_Patient', 'Cancelled_by_Doctor', 'Completed', 'No_Show'])
                 ->default('Active');
+            $table->timestamp('checked_in_at')->nullable();
             $table->string('disease')->nullable();
             $table->string('allergies')->nullable();
             $table->text('prescription_details')->nullable();

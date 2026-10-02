@@ -22,17 +22,17 @@
     <div class="hms-card mb-3">
         <div class="hms-card__body">
             <div class="d-flex flex-wrap gap-2 mb-3">
-                <a href="{{ route('clinic.appointments.index', array_filter(['status' => $status])) }}"
+                <a href="{{ route('clinic.appointments.index', array_filter(['status' => $status, 'attendance' => $attendance ?? ''])) }}"
                    class="btn btn-sm {{ $date === today()->toDateString() ? 'btn-hms' : 'btn-outline-secondary' }}">
                     Today
                 </a>
-                <a href="{{ route('clinic.appointments.index', array_merge(array_filter(['status' => $status]), ['date' => 'all'])) }}"
+                <a href="{{ route('clinic.appointments.index', array_merge(array_filter(['status' => $status, 'attendance' => $attendance ?? '']), ['date' => 'all'])) }}"
                    class="btn btn-sm {{ $date === 'all' ? 'btn-hms' : 'btn-outline-secondary' }}">
                     All dates
                 </a>
                 <span class="vr mx-1"></span>
                 @foreach ($statuses as $key => $label)
-                    <a href="{{ route('clinic.appointments.index', array_filter(['date' => $date, 'status' => $key])) }}"
+                    <a href="{{ route('clinic.appointments.index', array_filter(['date' => $date, 'status' => $key, 'attendance' => $attendance ?? ''])) }}"
                        class="btn btn-sm {{ $status === $key ? 'btn-hms' : 'btn-outline-secondary' }}">
                         {{ $label }}
                     </a>
@@ -41,7 +41,7 @@
 
             <form method="GET" action="{{ route('clinic.appointments.index') }}" class="row g-2">
                 <input type="hidden" name="status" value="{{ $status }}">
-                <div class="col-md-9">
+                <div class="col-md-7">
                     <label class="visually-hidden" for="date">Appointment date</label>
                     <select class="form-select" id="date" name="date">
                         <option value="all" @selected($date === 'all')>All dates</option>
@@ -49,6 +49,14 @@
                         @if ($date !== 'all' && $date !== today()->toDateString())
                             <option value="{{ $date }}" selected>{{ \Carbon\Carbon::parse($date)->format('d M Y') }}</option>
                         @endif
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="visually-hidden" for="attendance">Arrival</label>
+                    <select id="attendance" name="attendance" class="form-select">
+                        <option value="" @selected(($attendance ?? '') === '')>All arrivals</option>
+                        <option value="arrived" @selected(($attendance ?? '') === 'arrived')>Arrived</option>
+                        <option value="not_arrived" @selected(($attendance ?? '') === 'not_arrived')>Not arrived</option>
                     </select>
                 </div>
                 <div class="col-md-3 d-flex gap-2">

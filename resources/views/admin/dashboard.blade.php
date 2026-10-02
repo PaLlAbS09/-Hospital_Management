@@ -176,17 +176,30 @@
                                 <th>Date</th>
                                 <th>Time</th>
                                 <th>Status</th>
+                                <th>Arrival</th>
                             </tr>
                         </thead>
                         <tbody>
                             @foreach ($recentAppointments as $appointment)
                                 <tr>
-                                    <td>{{ $appointment->patient?->full_name ?? 'Removed patient' }}</td>
+                                    <td>
+                                        {{ $appointment->patient?->full_name ?? 'Removed patient' }}
+                                        <div class="text-muted small"><i class="bi bi-telephone me-1"></i>{{ $appointment->contact_phone ?? $appointment->patient?->contact ?? '—' }}</div>
+                                    </td>
                                     <td>{{ $appointment->doctor?->full_name ?? 'Removed doctor' }}</td>
                                     <td>{{ $appointment->clinic?->clinic_name ?? 'Removed clinic' }}</td>
                                     <td>{{ $appointment->appointment_date?->format('d M Y') }}</td>
                                     <td>{{ $appointment->formatted_time }}</td>
                                     <td><x-status-badge :status="$appointment->status" /></td>
+                                    <td>
+                                        @if ($appointment->is_checked_in)
+                                            <span class="badge text-bg-success">Arrived</span>
+                                        @elseif ($appointment->is_active)
+                                            <span class="badge text-bg-warning">Not arrived</span>
+                                        @else
+                                            <span class="text-muted small">—</span>
+                                        @endif
+                                    </td>
                                 </tr>
                             @endforeach
                         </tbody>

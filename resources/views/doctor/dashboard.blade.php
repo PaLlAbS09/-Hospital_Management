@@ -66,7 +66,16 @@
                                             @endif
                                         </div>
                                     </div>
-                                    <x-status-badge :status="$appointment->status" />
+                                    <div class="text-end">
+                                        <x-status-badge :status="$appointment->status" />
+                                        <div>
+                                            @if ($appointment->is_checked_in)
+                                                <small class="text-success">Arrived</small>
+                                            @elseif ($appointment->is_active)
+                                                <small class="text-warning">Not arrived</small>
+                                            @endif
+                                        </div>
+                                    </div>
                                 </li>
                             @endforeach
                         </ul>

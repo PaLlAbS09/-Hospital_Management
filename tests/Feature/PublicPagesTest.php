@@ -24,7 +24,19 @@ class PublicPagesTest extends TestCase
 
     public function test_landing_page_loads(): void
     {
-        $this->get('/')->assertOk();
+        $response = $this->get('/');
+
+        $response->assertOk();
+        $response->assertSee('Book a doctor near you in three simple steps.');
+
+        $html = (string) $response->getContent();
+
+        $this->assertStringContainsString('<main', $html);
+        $this->assertLessThan(
+            strpos($html, 'Book a doctor near you in three simple steps.'),
+            strpos($html, '<main'),
+            'Landing page content should be rendered inside the layout <main> element.'
+        );
     }
 
     public function test_clinic_directory_loads(): void

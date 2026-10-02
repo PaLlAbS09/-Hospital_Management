@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\Appointment;
 use App\Models\Clinic;
-use App\Models\ClinicSchedule;
 use App\Models\DoctorSessionLog;
+use App\Services\AppointmentBookingException;
+use App\Services\AppointmentBookingService;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
@@ -73,6 +75,7 @@ class ClinicController extends Controller
 
         $date = $request->string('date')->trim()->toString() ?: today()->toDateString();
         $status = $request->string('status')->trim()->toString();
+        $attendance = $request->string('attendance')->trim()->toString();
 
         $appointments = $clinic->appointments()
             ->with(['patient', 'doctor'])
@@ -82,6 +85,8 @@ class ClinicController extends Controller
                 fn ($q) => $q->whereDate('appointment_date', $date)
             )
             ->when(filled($status), fn ($q) => $q->where('status', $status))
+            ->when($attendance === 'arrived', fn ($q) => $q->checkedIn())
+            ->when($attendance === 'not_arrived', fn ($q) => $q->notCheckedIn())
             ->orderBy('appointment_date')
             ->orderBy('appointment_time')
             ->paginate(20)
@@ -92,6 +97,7 @@ class ClinicController extends Controller
             'appointments' => $appointments,
             'date' => $date,
             'status' => $status,
+            'attendance' => $attendance,
             'statuses' => Appointment::statuses(),
             'summary' => [
                 'total' => $clinic->appointments()->count(),
@@ -102,6 +108,22 @@ class ClinicController extends Controller
                     ->count(),
             ],
         ]);
+    }
+
+    /**
+     * Mark patient arrival from the clinic / reception desk.
+     */
+    public function checkIn(Appointment $appointment, AppointmentBookingService $bookings): RedirectResponse
+    {
+        abort_unless($appointment->clinic_id === $this->clinic()->clinic_id, 403);
+
+        try {
+            $bookings->checkIn($appointment);
+        } catch (AppointmentBookingException $exception) {
+            return back()->with('error', $exception->getMessage());
+        }
+
+        return back()->with('success', 'Patient '.$appointment->patient->full_name.' marked as arrived.');
     }
 
     protected function clinic(): Clinic

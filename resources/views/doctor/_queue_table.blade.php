@@ -22,7 +22,9 @@
                             <span class="hms-avatar">{{ $appointment->patient?->initials ?? 'PT' }}</span>
                             <div>
                                 <div class="fw-semibold">{{ $appointment->patient?->full_name ?? '—' }}</div>
-                                <div class="text-muted small">{{ $appointment->patient?->contact }}</div>
+                                <div class="text-muted small">
+                                    <i class="bi bi-telephone me-1"></i>{{ $appointment->contact_phone ?? $appointment->patient?->contact }}
+                                </div>
                             </div>
                         </div>
                     </td>
@@ -35,13 +37,29 @@
                             <span class="text-muted small">No prescription yet</span>
                         @endif
                     </td>
-                    <td><x-status-badge :status="$appointment->status" /></td>
+                    <td>
+                        <x-status-badge :status="$appointment->status" />
+                        @if ($appointment->is_checked_in)
+                            <div><small class="text-success">Arrived {{ $appointment->checked_in_at?->format('H:i') }}</small></div>
+                        @elseif ($appointment->is_active)
+                            <div><small class="text-warning">Not arrived</small></div>
+                        @endif
+                    </td>
                     <td class="text-end text-nowrap">
                         <div class="d-inline-flex gap-1">
                             <button type="button" class="btn btn-sm btn-outline-hms" data-bs-toggle="modal"
                                     data-bs-target="#rx-{{ $appointment->appointment_id }}">
                                 <i class="bi bi-file-earmark-medical me-1"></i>{{ $appointment->has_prescription ? 'Edit' : 'Prescribe' }}
                             </button>
+
+                            @if ($appointment->status === \App\Models\Appointment::STATUS_ACTIVE && ! $appointment->is_checked_in)
+                                <form method="POST" action="{{ route('doctor.appointments.check-in', $appointment) }}">
+                                    @csrf
+                                    <button class="btn btn-sm btn-outline-success" title="Mark patient as arrived">
+                                        <i class="bi bi-person-check me-1"></i>Arrived
+                                    </button>
+                                </form>
+                            @endif
 
                             @if ($appointment->status === \App\Models\Appointment::STATUS_ACTIVE)
                                 <form method="POST" action="{{ route('doctor.appointments.complete', $appointment) }}">

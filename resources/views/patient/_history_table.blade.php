@@ -39,7 +39,13 @@
                                     <div>{{ $appointment->clinic?->clinic_name ?? '—' }}</div>
                                     <div class="text-muted small">{{ $appointment->clinic?->area }}</div>
                                 </td>
-                                <td><x-status-badge :status="$appointment->status" /></td>
+                                <td>
+                                    <x-status-badge :status="$appointment->status" />
+                                    @if ($appointment->is_checked_in)
+                                        <div><small class="text-success">Arrived {{ $appointment->checked_in_at?->format('d M H:i') }}</small></div>
+                                    @endif
+                                    <div><small class="text-muted">Phone: {{ $appointment->contact_phone ?? $appointment->patient?->contact ?? '—' }}</small></div>
+                                </td>
                                 <td class="text-end text-nowrap">
                                     <div class="d-inline-flex gap-1">
                                         @if ($appointment->is_active)

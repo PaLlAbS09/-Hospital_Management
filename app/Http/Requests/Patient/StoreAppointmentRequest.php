@@ -23,6 +23,7 @@ class StoreAppointmentRequest extends FormRequest
             'doctor_id' => ['required', 'integer', Rule::exists('doctors', 'doctor_id')],
             'appointment_date' => ['required', 'date', 'after_or_equal:today'],
             'appointment_time' => ['required', 'date_format:H:i'],
+            'contact_phone' => ['nullable', 'string', 'digits_between:7,15'],
         ];
     }
 
@@ -36,6 +37,7 @@ class StoreAppointmentRequest extends FormRequest
             'doctor_id.exists' => 'The selected doctor is no longer available.',
             'appointment_date.after_or_equal' => 'Appointments can only be booked for today or a future date.',
             'appointment_time.date_format' => 'Please select one of the offered time slots.',
+            'contact_phone.digits_between' => 'Enter a valid phone number (7-15 digits, no spaces or symbols).',
         ];
     }
 }

@@ -102,7 +102,12 @@
                                             <span class="text-muted small">—</span>
                                         @endif
                                     </td>
-                                    <td><x-status-badge :status="$appointment->status" /></td>
+                                    <td>
+                                        <x-status-badge :status="$appointment->status" />
+                                        @if ($appointment->is_checked_in)
+                                            <div><small class="text-success">Arrived {{ $appointment->checked_in_at?->format('d M H:i') }}</small></div>
+                                        @endif
+                                    </td>
                                 </tr>
                             @endforeach
                         </tbody>

@@ -2,10 +2,15 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as AuthUser;
+use Illuminate\Notifications\Notifiable;
 
 class Clinic extends AuthUser
 {
+    use HasFactory;
+    use Notifiable;
+
     public const STATUS_PENDING = 'pending';
 
     public const STATUS_APPROVED = 'approved';

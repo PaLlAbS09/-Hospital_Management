@@ -53,9 +53,21 @@
                                     @foreach ($todayAppointments as $appointment)
                                         <tr>
                                             <td class="fw-semibold text-nowrap">{{ $appointment->formatted_time }}</td>
-                                            <td>{{ $appointment->patient?->full_name ?? '—' }}</td>
+                                            <td>
+                                                {{ $appointment->patient?->full_name ?? '—' }}
+                                                <div class="small text-muted"><i class="bi bi-telephone me-1"></i>{{ $appointment->contact_phone ?? $appointment->patient?->contact ?? '—' }}</div>
+                                            </td>
                                             <td>{{ $appointment->doctor?->full_name ?? '—' }}</td>
-                                            <td><x-status-badge :status="$appointment->status" /></td>
+                                            <td>
+                                                <x-status-badge :status="$appointment->status" />
+                                                <div>
+                                                    @if ($appointment->is_checked_in)
+                                                        <small class="text-success">Arrived</small>
+                                                    @elseif ($appointment->is_active)
+                                                        <small class="text-warning">Not arrived</small>
+                                                    @endif
+                                                </div>
+                                            </td>
                                         </tr>
                                     @endforeach
                                 </tbody>

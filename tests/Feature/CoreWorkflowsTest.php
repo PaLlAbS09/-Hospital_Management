@@ -8,7 +8,9 @@ use App\Models\Clinic;
 use App\Models\ClinicSchedule;
 use App\Models\Doctor;
 use App\Models\Patient;
+use App\Notifications\AppointmentCancelled;
 use App\Notifications\AppointmentConfirmed;
+use App\Notifications\AppointmentNoShow;
 use App\Notifications\ClinicApproved;
 use App\Services\AppointmentBookingService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -97,6 +99,185 @@ class CoreWorkflowsTest extends TestCase
             'appointment_date' => $date,
             'appointment_time' => '09:00',
         ])->assertSessionHas('error');
+    }
+
+    public function test_booking_availability_endpoint_returns_slots_for_selected_date(): void
+    {
+        $clinic = Clinic::factory()->approved()->create();
+        /** @var Doctor $doctor */
+        $doctor = Doctor::factory()->create();
+        /** @var Patient $patient */
+        $patient = Patient::factory()->create();
+        $dateOne = today()->addDay()->toDateString();
+        $dateTwo = today()->addDays(2)->toDateString();
+
+        ClinicSchedule::factory()->create([
+            'clinic_id' => $clinic->clinic_id,
+            'doctor_id' => $doctor->doctor_id,
+            'schedule_date' => $dateOne,
+            'start_time' => '09:00',
+            'end_time' => '10:00',
+            'patient_capacity' => 10,
+        ]);
+
+        ClinicSchedule::factory()->create([
+            'clinic_id' => $clinic->clinic_id,
+            'doctor_id' => $doctor->doctor_id,
+            'schedule_date' => $dateTwo,
+            'start_time' => '14:00',
+            'end_time' => '15:00',
+            'patient_capacity' => 10,
+        ]);
+
+        $response = $this->actingAs($patient, 'patient')->getJson(
+            route('patient.clinics.availability', $clinic).'?date='.$dateTwo
+        );
+
+        $response->assertOk()
+            ->assertJsonPath('date', $dateTwo)
+            ->assertJsonStructure(['date', 'date_label', 'available_dates', 'offers_html', 'booking_notice_html']);
+
+        $this->assertStringContainsString('14:00', $response->json('offers_html'));
+        $this->assertStringNotContainsString('09:00', $response->json('offers_html'));
+    }
+
+    public function test_booking_page_shows_active_date_chip(): void
+    {
+        $clinic = Clinic::factory()->approved()->create();
+        /** @var Doctor $doctor */
+        $doctor = Doctor::factory()->create();
+        /** @var Patient $patient */
+        $patient = Patient::factory()->create();
+        $date = today()->addDay()->toDateString();
+
+        ClinicSchedule::factory()->create([
+            'clinic_id' => $clinic->clinic_id,
+            'doctor_id' => $doctor->doctor_id,
+            'schedule_date' => $date,
+            'start_time' => '09:00',
+            'end_time' => '12:00',
+            'patient_capacity' => 10,
+        ]);
+
+        $response = $this->actingAs($patient, 'patient')
+            ->get(route('patient.clinics.doctors', ['clinic' => $clinic, 'date' => $date]));
+
+        $response->assertOk();
+        $response->assertSee('id="active-date-chip"', false);
+        $response->assertSee('data-active-date="'.$date.'"', false);
+        $response->assertSee('id="booking-offers-wrap"', false);
+        $response->assertSee('id="booking-date-chips"', false);
+    }
+
+    public function test_booking_stores_contact_phone_and_sends_confirmation_email(): void
+    {
+        Notification::fake();
+
+        $clinic = Clinic::factory()->approved()->create();
+        /** @var Doctor $doctor */
+        $doctor = Doctor::factory()->create();
+        /** @var Patient $patient */
+        $patient = Patient::factory()->create();
+        $date = today()->addDay()->toDateString();
+
+        $schedule = ClinicSchedule::factory()->create([
+            'clinic_id' => $clinic->clinic_id,
+            'doctor_id' => $doctor->doctor_id,
+            'schedule_date' => $date,
+            'start_time' => '09:00',
+            'end_time' => '12:00',
+            'patient_capacity' => 10,
+        ]);
+
+        $slot = $schedule->slotTimes()[0];
+
+        $this->actingAs($patient, 'patient')->post(route('patient.appointments.store'), [
+            'clinic_id' => $clinic->clinic_id,
+            'doctor_id' => $doctor->doctor_id,
+            'appointment_date' => $date,
+            'appointment_time' => $slot,
+            'contact_phone' => '9876543210',
+        ])->assertRedirect(route('patient.dashboard'));
+
+        $this->assertDatabaseHas('appointments', [
+            'patient_id' => $patient->patient_id,
+            'contact_phone' => '9876543210',
+            'status' => Appointment::STATUS_ACTIVE,
+        ]);
+
+        Notification::assertSentTo($patient, AppointmentConfirmed::class);
+    }
+
+    public function test_check_in_marks_arrival_and_protects_no_show_sweep(): void
+    {
+        Notification::fake();
+
+        /** @var Admin $admin */
+        $admin = Admin::create([
+            'name' => 'Reception',
+            'email' => 'reception@example.com',
+            'password' => Hash::make('password123'),
+        ]);
+        /** @var Patient $patient */
+        $patient = Patient::factory()->create();
+        $appointment = Appointment::factory()->create([
+            'patient_id' => $patient->patient_id,
+            'appointment_date' => today()->toDateString(),
+            'appointment_time' => now()->subHour()->format('H:i'),
+            'status' => Appointment::STATUS_ACTIVE,
+            'checked_in_at' => null,
+        ]);
+
+        $this->actingAs($admin, 'admin')
+            ->post(route('admin.appointments.check-in', $appointment))
+            ->assertSessionHas('success');
+
+        $this->assertNotNull($appointment->fresh()->checked_in_at);
+
+        $cancelled = app(AppointmentBookingService::class)->cancelExpiredNoShows();
+
+        $this->assertSame(0, $cancelled);
+        $this->assertSame(Appointment::STATUS_ACTIVE, $appointment->fresh()->status);
+    }
+
+    public function test_no_show_sweep_auto_cancels_and_emails_patient(): void
+    {
+        Notification::fake();
+
+        /** @var Patient $patient */
+        $patient = Patient::factory()->create();
+        $appointment = Appointment::factory()->create([
+            'patient_id' => $patient->patient_id,
+            'appointment_date' => today()->toDateString(),
+            'appointment_time' => now()->subHour()->format('H:i'),
+            'status' => Appointment::STATUS_ACTIVE,
+            'checked_in_at' => null,
+        ]);
+
+        $cancelled = app(AppointmentBookingService::class)->cancelExpiredNoShows();
+
+        $this->assertSame(1, $cancelled);
+        $this->assertSame(Appointment::STATUS_NO_SHOW, $appointment->fresh()->status);
+        Notification::assertSentTo($patient, AppointmentNoShow::class);
+    }
+
+    public function test_manual_cancellation_emails_patient(): void
+    {
+        Notification::fake();
+
+        /** @var Patient $patient */
+        $patient = Patient::factory()->create();
+        $appointment = Appointment::factory()->create([
+            'patient_id' => $patient->patient_id,
+            'status' => Appointment::STATUS_ACTIVE,
+        ]);
+
+        $this->actingAs($patient, 'patient')
+            ->post(route('patient.appointments.cancel', $appointment))
+            ->assertSessionHas('success');
+
+        $this->assertSame(Appointment::STATUS_CANCELLED_BY_PATIENT, $appointment->fresh()->status);
+        Notification::assertSentTo($patient, AppointmentCancelled::class);
     }
 
     public function test_clinic_approval_blocks_pending_and_rejected(): void

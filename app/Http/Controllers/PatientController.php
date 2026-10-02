@@ -5,10 +5,18 @@ namespace App\Http\Controllers;
 use App\Http\Requests\Patient\StoreAppointmentRequest;
 use App\Models\Appointment;
 use App\Models\Clinic;
+use App\Models\ClinicSchedule;
 use App\Models\Patient;
+use App\Notifications\AppointmentCancelled;
+use App\Notifications\AppointmentConfirmed;
+use App\Services\AppointmentBookingException;
+use App\Services\AppointmentBookingService;
+use App\Support\Notifier;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
@@ -26,7 +34,7 @@ class PatientController extends Controller
         $today = today()->toDateString();
 
         $appointments = $patient->appointments()
-            ->with(['doctor', 'clinic'])
+            ->with(['doctor', 'clinic', 'patient'])
             ->orderByDesc('appointment_date')
             ->orderByDesc('appointment_time')
             ->get();
@@ -41,10 +49,7 @@ class PatientController extends Controller
             'total' => $appointments->count(),
             'upcoming' => $upcoming->count(),
             'completed' => $appointments->where('status', Appointment::STATUS_COMPLETED)->count(),
-            'cancelled' => $appointments->whereIn('status', [
-                Appointment::STATUS_CANCELLED_BY_PATIENT,
-                Appointment::STATUS_CANCELLED_BY_DOCTOR,
-            ])->count(),
+            'cancelled' => $appointments->whereIn('status', Appointment::cancelledStatuses())->count(),
             'prescriptions' => $appointments->filter(fn (Appointment $appointment) => $appointment->has_prescription)->count(),
         ];
 
@@ -99,7 +104,144 @@ class PatientController extends Controller
         abort_unless($clinic->is_approved, 404, 'This clinic is not available for booking.');
 
         $date = $this->normaliseDate($request->string('date')->trim()->toString());
+        $data = $this->availabilityData($clinic, $date);
 
+        return view('patient.clinic_doctors', array_merge(['clinic' => $clinic], $data));
+    }
+
+    /**
+     * JSON availability for the booking date picker (no full reload needed).
+     */
+    public function clinicAvailability(Clinic $clinic, Request $request): JsonResponse
+    {
+        abort_unless($clinic->is_approved, 404, 'This clinic is not available for booking.');
+
+        $date = $this->normaliseDate($request->string('date')->trim()->toString());
+        $data = $this->availabilityData($clinic, $date);
+
+        return response()->json([
+            'clinic_id' => $clinic->clinic_id,
+            'date' => $data['date'],
+            'date_label' => Carbon::parse($data['date'])->format('D, d M Y'),
+            'available_dates' => $data['availableDates'],
+            'offers_html' => view('patient._offers_list', [
+                'clinic' => $clinic,
+                'date' => $data['date'],
+                'offers' => $data['offers'],
+            ])->render(),
+            'booking_notice_html' => view('patient._booking_notice', [
+                'myAppointments' => $data['myAppointments'],
+            ])->render(),
+        ]);
+    }
+
+    /**
+     * Step 3 - book the appointment (status defaults to `Active`).
+     */
+    public function book(StoreAppointmentRequest $request, AppointmentBookingService $bookings): RedirectResponse
+    {
+        $patient = $this->patient();
+
+        $contactPhone = $request->string('contact_phone')->trim()->toString() ?: null;
+
+        try {
+            $result = $bookings->book(
+                $patient,
+                $request->integer('clinic_id'),
+                $request->integer('doctor_id'),
+                $request->string('appointment_date')->toString(),
+                $request->string('appointment_time')->toString(),
+                $contactPhone
+            );
+        } catch (AppointmentBookingException $exception) {
+            return back()->with('error', $exception->getMessage());
+        }
+
+        /** @var Appointment $appointment */
+        $appointment = $result['appointment'];
+        $clinic = $result['schedule']->clinic ?? Clinic::query()->find($appointment->clinic_id);
+
+        $appointment->load(['patient', 'doctor', 'clinic']);
+        $emailSent = Notifier::send($patient, new AppointmentConfirmed($appointment));
+
+        return redirect()
+            ->route('patient.dashboard')
+            ->with('success', 'Appointment booked with Dr. '.$appointment->doctor->full_name.' at '.($clinic?->clinic_name ?? 'the clinic').' on '.$appointment->appointment_date->format('d M Y').' at '.$appointment->formatted_time.'.'
+                .($emailSent
+                    ? ' A confirmation email was sent to '.$patient->email
+                        .($appointment->notification_phone ? ' and an SMS to '.$appointment->notification_phone.'.' : '.')
+                    : ' We could not send the confirmation email — please check the mail configuration.'));
+    }
+
+    /**
+     * Cancel an active appointment (`Cancelled_by_Patient`).
+     */
+    public function cancel(Appointment $appointment): RedirectResponse
+    {
+        abort_unless($appointment->patient_id === $this->patient()->patient_id, 403);
+
+        if ($appointment->status !== Appointment::STATUS_ACTIVE) {
+            return back()->with('error', 'Only active appointments can be cancelled.');
+        }
+
+        $appointment->update(['status' => Appointment::STATUS_CANCELLED_BY_PATIENT]);
+        $appointment->load(['patient', 'doctor', 'clinic']);
+        $emailSent = $appointment->patient
+            ? Notifier::send($appointment->patient, new AppointmentCancelled($appointment, 'patient'))
+            : false;
+
+        return back()->with('success', 'Your appointment has been cancelled.'
+            .($emailSent
+                ? ' A cancellation email was sent to '.($appointment->patient?->email ?? 'your email').'.'
+                : ' We could not send the cancellation email.'));
+    }
+
+    /**
+     * Printable prescription.
+     */
+    public function prescription(Appointment $appointment): View
+    {
+        abort_unless($appointment->patient_id === $this->patient()->patient_id, 403);
+
+        $appointment->load(['patient', 'doctor', 'clinic']);
+
+        return view('patient.prescription', compact('appointment'));
+    }
+
+    protected function patient(): Patient
+    {
+        /** @var Patient $patient */
+        $patient = Auth::guard('patient')->user();
+
+        abort_unless($patient instanceof Patient, 403);
+
+        return $patient;
+    }
+
+    protected function normaliseDate(?string $date): string
+    {
+        $today = today()->toDateString();
+
+        if (! filled($date)) {
+            return $today;
+        }
+
+        try {
+            $parsed = Carbon::parse($date)->toDateString();
+        } catch (\Throwable $exception) {
+            return $today;
+        }
+
+        return $parsed < $today ? $today : $parsed;
+    }
+
+    /**
+     * Shared availability query for the booking page + JSON endpoint.
+     *
+     * @return array{date: string, offers: Collection<int, array{schedule: ClinicSchedule, slots: array}>, availableDates: Collection<int, string>, myAppointments: \Illuminate\Database\Eloquent\Collection<int, Appointment>}
+     */
+    protected function availabilityData(Clinic $clinic, string $date): array
+    {
         $schedules = $clinic->schedules()
             ->with('doctor')
             ->onDate($date)
@@ -126,131 +268,11 @@ class PatientController extends Controller
             ->onDate($date)
             ->get();
 
-        return view('patient.clinic_doctors', [
-            'clinic' => $clinic,
+        return [
             'date' => $date,
             'offers' => $offers,
             'availableDates' => $availableDates,
             'myAppointments' => $myAppointments,
-        ]);
-    }
-
-    /**
-     * Step 3 - book the appointment (status defaults to `Active`).
-     */
-    public function book(StoreAppointmentRequest $request): RedirectResponse
-    {
-        $patient = $this->patient();
-
-        $clinic = Clinic::query()->findOrFail($request->integer('clinic_id'));
-
-        if (! $clinic->is_approved) {
-            return back()->with('error', 'This clinic is not available for booking.');
-        }
-
-        $doctorId = $request->integer('doctor_id');
-        $date = $request->string('appointment_date')->toString();
-        $time = $request->string('appointment_time')->toString();
-
-        // The requested slot must fall inside a published schedule.
-        $schedule = $clinic->schedules()
-            ->forDoctor($doctorId)
-            ->onDate($date)
-            ->where('start_time', '<=', $time)
-            ->where('end_time', '>', $time)
-            ->first();
-
-        if (! $schedule) {
-            return back()->with('error', 'That time slot is not part of any published schedule. Please pick another slot.');
-        }
-
-        // Capacity guard - never overbook a schedule.
-        if ($schedule->bookedCount() >= (int) $schedule->patient_capacity) {
-            return back()->with('error', 'This schedule has reached its full patient capacity ('.$schedule->patient_capacity.' patients). Please choose another doctor or date.');
-        }
-
-        // Someone may have taken the exact slot a moment ago.
-        if ($schedule->slotConsumingAppointments()->where('appointment_time', $time)->exists()) {
-            return back()->with('error', 'That time slot was just booked by another patient. Please choose another slot.');
-        }
-
-        // The same patient may not hold two active appointments with the same doctor on the same day.
-        $alreadyBooked = $patient->appointments()
-            ->active()
-            ->where('doctor_id', $doctorId)
-            ->where('clinic_id', $clinic->clinic_id)
-            ->whereDate('appointment_date', $date)
-            ->exists();
-
-        if ($alreadyBooked) {
-            return back()->with('error', 'You already have an active appointment with this doctor on '.$date.'.');
-        }
-
-        $appointment = Appointment::create([
-            'patient_id' => $patient->patient_id,
-            'clinic_id' => $clinic->clinic_id,
-            'doctor_id' => $doctorId,
-            'appointment_date' => $date,
-            'appointment_time' => $time,
-            'status' => Appointment::STATUS_ACTIVE,
-        ]);
-
-        return redirect()
-            ->route('patient.dashboard')
-            ->with('success', 'Appointment booked with Dr. '.$appointment->doctor->full_name.' at '.$clinic->clinic_name.' on '.$appointment->appointment_date->format('d M Y').' at '.$appointment->formatted_time.'.');
-    }
-
-    /**
-     * Cancel an active appointment (`Cancelled_by_Patient`).
-     */
-    public function cancel(Appointment $appointment): RedirectResponse
-    {
-        abort_unless($appointment->patient_id === $this->patient()->patient_id, 403);
-
-        if ($appointment->status !== Appointment::STATUS_ACTIVE) {
-            return back()->with('error', 'Only active appointments can be cancelled.');
-        }
-
-        $appointment->update(['status' => Appointment::STATUS_CANCELLED_BY_PATIENT]);
-
-        return back()->with('success', 'Your appointment has been cancelled.');
-    }
-
-    /**
-     * Printable prescription.
-     */
-    public function prescription(Appointment $appointment): View
-    {
-        abort_unless($appointment->patient_id === $this->patient()->patient_id, 403);
-
-        $appointment->load(['patient', 'doctor', 'clinic']);
-
-        return view('patient.prescription', compact('appointment'));
-    }
-
-
-
-    protected function patient(): Patient
-    {
-        /** @var Patient $patient */
-        $patient = Auth::guard('patient')->user();
-
-        abort_unless($patient instanceof Patient, 403);
-
-        return $patient;
-    }
-
-    
-    protected function normaliseDate(?string $date): string
-    {
-        if (! filled($date)) {
-            return today()->toDateString();
-        }
-
-        try {
-            return Carbon::parse($date)->toDateString();
-        } catch (\Throwable $exception) {
-            return today()->toDateString();
-        }
+        ];
     }
 }

@@ -10,6 +10,7 @@
         'rejected', 'Cancelled_by_Doctor' => 'danger',
         'Active' => 'primary',
         'Cancelled_by_Patient' => 'secondary',
+        'No_Show' => 'dark',
         default => 'secondary',
     };
 

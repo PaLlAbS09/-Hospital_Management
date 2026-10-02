@@ -6,6 +6,10 @@ use App\Http\Requests\Doctor\UpdatePrescriptionRequest;
 use App\Models\Appointment;
 use App\Models\Doctor;
 use App\Models\DoctorSessionLog;
+use App\Notifications\AppointmentCancelled;
+use App\Services\AppointmentBookingException;
+use App\Services\AppointmentBookingService;
+use App\Support\Notifier;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -68,6 +72,7 @@ class DoctorController extends Controller
 
         $date = $request->string('date')->trim()->toString() ?: today()->toDateString();
         $status = $request->string('status')->trim()->toString();
+        $attendance = $request->string('attendance')->trim()->toString();
 
         $appointments = $doctor->appointments()
             ->with(['patient', 'clinic'])
@@ -77,6 +82,8 @@ class DoctorController extends Controller
                 fn ($q) => $q->whereDate('appointment_date', $date)
             )
             ->when(filled($status), fn ($q) => $q->where('status', $status))
+            ->when($attendance === 'arrived', fn ($q) => $q->checkedIn())
+            ->when($attendance === 'not_arrived', fn ($q) => $q->notCheckedIn())
             ->orderBy('appointment_date')
             ->orderBy('appointment_time')
             ->paginate(20)
@@ -87,6 +94,7 @@ class DoctorController extends Controller
             'appointments' => $appointments,
             'date' => $date,
             'status' => $status,
+            'attendance' => $attendance,
             'statuses' => Appointment::statuses(),
         ]);
     }
@@ -119,8 +127,29 @@ class DoctorController extends Controller
         }
 
         $appointment->update(['status' => Appointment::STATUS_CANCELLED_BY_DOCTOR]);
+        $appointment->load(['patient', 'doctor', 'clinic']);
+        $emailSent = $appointment->patient
+            ? Notifier::send($appointment->patient, new AppointmentCancelled($appointment, 'doctor'))
+            : false;
 
-        return back()->with('success', 'Appointment for '.$appointment->patient->full_name.' cancelled.');
+        return back()->with('success', 'Appointment for '.$appointment->patient->full_name.' cancelled.'
+            .($emailSent ? ' A cancellation email was sent to the patient.' : ' We could not send the cancellation email.'));
+    }
+
+    /**
+     * Mark patient arrival from the doctor queue.
+     */
+    public function checkIn(Appointment $appointment, AppointmentBookingService $bookings): RedirectResponse
+    {
+        $this->authorizeAppointment($appointment);
+
+        try {
+            $bookings->checkIn($appointment);
+        } catch (AppointmentBookingException $exception) {
+            return back()->with('error', $exception->getMessage());
+        }
+
+        return back()->with('success', 'Patient '.$appointment->patient->full_name.' marked as arrived.');
     }
 
     /**
@@ -131,7 +160,8 @@ class DoctorController extends Controller
         $this->authorizeAppointment($appointment);
 
         if ($appointment->status === Appointment::STATUS_CANCELLED_BY_PATIENT
-            || $appointment->status === Appointment::STATUS_CANCELLED_BY_DOCTOR) {
+            || $appointment->status === Appointment::STATUS_CANCELLED_BY_DOCTOR
+            || $appointment->status === Appointment::STATUS_NO_SHOW) {
             return back()->with('error', 'A prescription cannot be recorded for a cancelled appointment.');
         }
 
