@@ -5,9 +5,14 @@
 
 @section('content')
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
-        <a href="{{ route('patient.clinics.index') }}" class="btn btn-sm btn-outline-secondary">
-            <i class="bi bi-arrow-left me-1"></i>Back to clinic search
+        <a href="{{ route('patient.clinics.show', $clinic) }}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i>Back to clinic profile
         </a>
+        <div class="d-flex align-items-center gap-2">
+            <span class="badge text-bg-success">1. Clinic</span>
+            <span class="badge text-bg-success">2. Why choose us</span>
+            <span class="badge text-bg-primary">3. Book a slot</span>
+        </div>
         <div class="d-flex align-items-center gap-2">
             <span class="hms-chip"><i class="bi bi-hospital"></i>{{ $clinic->clinic_name }}</span>
             <span class="hms-chip"><i class="bi bi-geo-alt"></i>{{ $clinic->area }}</span>

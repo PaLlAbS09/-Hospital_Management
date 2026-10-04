@@ -2,14 +2,23 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Clinic\StoreAnnouncementRequest;
+use App\Http\Requests\Clinic\StoreOfferRequest;
+use App\Http\Requests\Clinic\UpdateClinicAboutRequest;
 use App\Models\Appointment;
 use App\Models\Clinic;
+use App\Models\ClinicAnnouncement;
+use App\Models\ClinicOffer;
+use App\Models\ClinicSchedule;
+use App\Models\Doctor;
 use App\Models\DoctorSessionLog;
 use App\Services\AppointmentBookingException;
 use App\Services\AppointmentBookingService;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 /**
@@ -123,7 +132,163 @@ class ClinicController extends Controller
             return back()->with('error', $exception->getMessage());
         }
 
-        return back()->with('success', 'Patient '.$appointment->patient->full_name.' marked as arrived.');
+        return back()->with('success', 'Patient '.$appointment->patient->full_name.' marked as arrived. '
+            .'They have been asked to rate the doctor.');
+    }
+
+    /* ---------------------------------------------------------------------
+     | About section (banner image + clinic description)
+     | ------------------------------------------------------------------- */
+
+    /**
+     * Edit the public "about" block of the clinic.
+     */
+    public function editAbout(): View
+    {
+        $clinic = $this->clinic();
+
+        return view('clinic.about', [
+            'clinic' => $clinic,
+            'doctors' => $this->clinicDoctors(),
+        ]);
+    }
+
+    public function updateAbout(UpdateClinicAboutRequest $request): RedirectResponse
+    {
+        $clinic = $this->clinic();
+
+        $clinic->fill(['about' => $request->input('about')]);
+
+        if ($request->boolean('remove_banner') && filled($clinic->banner_image)) {
+            Storage::disk('public')->delete($clinic->banner_image);
+            $clinic->banner_image = null;
+        }
+
+        if ($request->hasFile('banner_image')) {
+            $clinic->banner_image = $request->file('banner_image')->store('clinic-banners', 'public');
+        }
+
+        $clinic->save();
+
+        return back()->with('success', 'Your clinic profile has been updated and is now live on the website.');
+    }
+
+    /* ---------------------------------------------------------------------
+     | New doctor announcements
+     | ------------------------------------------------------------------- */
+
+    public function announcements(): View
+    {
+        $clinic = $this->clinic();
+
+        return view('clinic.announcements.index', [
+            'clinic' => $clinic,
+            'announcements' => $clinic->announcements()->with('doctor')->latestFirst()->get(),
+            'doctors' => Doctor::orderBy('first_name')->orderBy('last_name')->get(),
+        ]);
+    }
+
+    public function storeAnnouncement(StoreAnnouncementRequest $request): RedirectResponse
+    {
+        $clinic = $this->clinic();
+
+        $clinic->announcements()->create([
+            'doctor_id' => $request->integer('doctor_id') ?: null,
+            'department' => $request->string('department')->trim()->toString(),
+            'joining_date' => $request->string('joining_date')->toString(),
+            'joining_time' => ClinicSchedule::normalizeTime($request->string('joining_time')->toString()),
+            'message' => $request->input('message'),
+            // The switch is on by default, so an absent key means "publish".
+            'is_active' => $request->boolean('is_active', true),
+        ]);
+
+        return back()->with('success', 'Announcement published. It now appears on the landing page slider.');
+    }
+
+    public function toggleAnnouncement(ClinicAnnouncement $announcement): RedirectResponse
+    {
+        abort_unless($announcement->clinic_id === $this->clinic()->clinic_id, 403);
+
+        $announcement->update(['is_active' => ! $announcement->is_active]);
+
+        return back()->with('success', 'Announcement '.($announcement->is_active ? 'published' : 'hidden').' successfully.');
+    }
+
+    public function destroyAnnouncement(ClinicAnnouncement $announcement): RedirectResponse
+    {
+        abort_unless($announcement->clinic_id === $this->clinic()->clinic_id, 403);
+
+        $announcement->delete();
+
+        return back()->with('success', 'Announcement removed.');
+    }
+
+    /* ---------------------------------------------------------------------
+     | Discount offers
+     | ------------------------------------------------------------------- */
+
+    public function offers(): View
+    {
+        $clinic = $this->clinic();
+
+        return view('clinic.offers.index', [
+            'clinic' => $clinic,
+            'offers' => $clinic->offers()->latestFirst()->get(),
+        ]);
+    }
+
+    public function storeOffer(StoreOfferRequest $request): RedirectResponse
+    {
+        $clinic = $this->clinic();
+
+        $clinic->offers()->create([
+            'title' => $request->string('title')->trim()->toString(),
+            'description' => $request->input('description'),
+            'discount_percent' => $request->integer('discount_percent'),
+            'valid_from' => $request->date('valid_from'),
+            'valid_until' => $request->date('valid_until'),
+            // The switch is on by default, so an absent key means "publish".
+            'is_active' => $request->boolean('is_active', true),
+        ]);
+
+        return back()->with('success', 'Offer published. It now appears on the landing page slider.');
+    }
+
+    public function toggleOffer(ClinicOffer $offer): RedirectResponse
+    {
+        abort_unless($offer->clinic_id === $this->clinic()->clinic_id, 403);
+
+        $offer->update(['is_active' => ! $offer->is_active]);
+
+        return back()->with('success', 'Offer '.($offer->is_active ? 'published' : 'hidden').' successfully.');
+    }
+
+    public function destroyOffer(ClinicOffer $offer): RedirectResponse
+    {
+        abort_unless($offer->clinic_id === $this->clinic()->clinic_id, 403);
+
+        $offer->delete();
+
+        return back()->with('success', 'Offer removed.');
+    }
+
+    /* ---------------------------------------------------------------------
+     | Internals
+     | ------------------------------------------------------------------- */
+
+    /**
+     * Doctors this clinic has published a schedule for, with their experience.
+     *
+     * @return Collection<int, Doctor>
+     */
+    protected function clinicDoctors()
+    {
+        return $this->clinic()
+            ->doctors()
+            ->withCount(['reviews as public_reviews_count' => fn ($query) => $query->public()])
+            ->orderBy('first_name')
+            ->orderBy('last_name')
+            ->get();
     }
 
     protected function clinic(): Clinic

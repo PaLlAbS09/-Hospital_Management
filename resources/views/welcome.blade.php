@@ -4,83 +4,9 @@
 
 @section('content')
 
-    {{-- Hero + area-wise quick search ------------------------------------- --}}
+    {{-- New doctor promotions + clinic discount offers (single slider) ------ --}}
     <div class="container mt-4">
-        <section class="hms-hero">
-            <div class="row align-items-center g-4">
-                <div class="col-lg-7">
-                    <span class="hms-chip mb-3"><i class="bi bi-geo-alt-fill"></i>Area-wise clinic discovery</span>
-                    <h1 class="display-6 mb-3">Book a doctor near you in three simple steps.</h1>
-                    <p class="lead mb-4">
-                        Search approved clinics by area, review the doctors on duty and reserve a time slot
-                        from their published schedule. No phone calls required.
-                    </p>
-
-                    <form action="{{ route('home') }}" method="GET" class="row g-2 align-items-center" style="max-width: 620px;">
-                        <div class="col-sm-7">
-                            <label class="visually-hidden" for="area">Area</label>
-                            <input type="text"
-                                   id="area"
-                                   name="area"
-                                   value="{{ $area }}"
-                                   list="area-options"
-                                   class="form-control form-control-lg"
-                                   placeholder="Enter your area, e.g. Bardhaman">
-                            <datalist id="area-options">
-                                @foreach ($areas as $option)
-                                    <option value="{{ $option }}"></option>
-                                @endforeach
-                            </datalist>
-                        </div>
-                        <div class="col-sm-5 d-grid">
-                            <button type="submit" class="btn btn-light btn-lg fw-semibold">
-                                <i class="bi bi-search me-1"></i>Find clinics
-                            </button>
-                        </div>
-                    </form>
-
-                    @if ($areas->isNotEmpty())
-                        <div class="mt-3 d-flex flex-wrap gap-2">
-                            @foreach ($areas->take(6) as $option)
-                                <a href="{{ route('home', ['area' => $option]) }}"
-                                   class="badge rounded-pill text-bg-light text-decoration-none px-3 py-2">
-                                    <i class="bi bi-geo me-1"></i>{{ $option }}
-                                </a>
-                            @endforeach
-                        </div>
-                    @endif
-                </div>
-
-                <div class="col-lg-5">
-                    <div class="row g-3">
-                        <div class="col-6">
-                            <div class="hms-hero__stat">
-                                <strong>{{ $totalClinics }}</strong>
-                                <span>Approved clinics</span>
-                            </div>
-                        </div>
-                        <div class="col-6">
-                            <div class="hms-hero__stat">
-                                <strong>{{ $totalDoctors }}</strong>
-                                <span>Registered doctors</span>
-                            </div>
-                        </div>
-                        <div class="col-6">
-                            <div class="hms-hero__stat">
-                                <strong>{{ $totalPatients }}</strong>
-                                <span>Patients served</span>
-                            </div>
-                        </div>
-                        <div class="col-6">
-                            <div class="hms-hero__stat">
-                                <strong>{{ $totalAppointments }}</strong>
-                                <span>Appointments booked</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
+        @include('partials.promo_slider')
     </div>
 
     {{-- Clinic directory ---------------------------------------------------- --}}
@@ -182,55 +108,11 @@
         </div>
     </div>
 
-    {{-- Role access --------------------------------------------------------- --}}
-    <div class="container mt-5">
-        <h2 class="h4 mb-3">Portal access</h2>
-        <div class="row g-3">
-            <div class="col-md-6 col-xl-3">
-                <div class="hms-role-card">
-                    <div class="hms-role-card__icon"><i class="bi bi-person-heart"></i></div>
-                    <h3 class="h6">Patient</h3>
-                    <p class="text-muted small">Register, search clinics by area and reserve your slot.</p>
-                    <div class="d-grid gap-2">
-                        <a href="{{ route('patient.login') }}" class="btn btn-sm btn-hms">Sign in</a>
-                        <a href="{{ route('patient.register') }}" class="btn btn-sm btn-outline-hms">Create account</a>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-6 col-xl-3">
-                <div class="hms-role-card">
-                    <div class="hms-role-card__icon"><i class="bi bi-hospital"></i></div>
-                    <h3 class="h6">Clinic</h3>
-                    <p class="text-muted small">Register your clinic and publish doctor schedules.</p>
-                    <div class="d-grid gap-2">
-                        <a href="{{ route('clinic.login') }}" class="btn btn-sm btn-hms">Sign in</a>
-                        <a href="{{ route('clinic.register') }}" class="btn btn-sm btn-outline-hms">Register clinic</a>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-6 col-xl-3">
-                <div class="hms-role-card">
-                    <div class="hms-role-card__icon"><i class="bi bi-person-badge"></i></div>
-                    <h3 class="h6">Doctor</h3>
-                    <p class="text-muted small">Work through your queue and record prescriptions.</p>
-                    <div class="d-grid gap-2">
-                        <a href="{{ route('doctor.login') }}" class="btn btn-sm btn-hms">Sign in</a>
-                        <span class="btn btn-sm btn-outline-secondary disabled">Accounts created by the admin</span>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-6 col-xl-3">
-                <div class="hms-role-card">
-                    <div class="hms-role-card__icon"><i class="bi bi-shield-lock"></i></div>
-                    <h3 class="h6">Administrator</h3>
-                    <p class="text-muted small">Approve clinics, manage doctors and audit sessions.</p>
-                    <div class="d-grid gap-2">
-                        <a href="{{ route('admin.login') }}" class="btn btn-sm btn-hms">Sign in</a>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+    {{-- Hero (premium redesign, same palette as before) ------------------ --}}
+    @include('partials.home_hero')
+
+    {{-- Best doctors chosen by the public ------------------------------- --}}
+    @include('partials.best_doctors')
 
     {{-- Contact us ---------------------------------------------------------- --}}
     <div class="container mt-5" id="contact">
@@ -300,4 +182,8 @@
         </div>
     </div>
 @endsection
+
+@push('scripts')
+    @include('partials.swiper_init')
+@endpush
 

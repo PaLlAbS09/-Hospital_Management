@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as AuthUser;
 use Illuminate\Notifications\Notifiable;
@@ -29,6 +30,8 @@ class Doctor extends AuthUser
         'email',
         'contact',
         'password',
+        'experience_years',
+        'experience_note',
     ];
 
     protected $hidden = [
@@ -43,6 +46,7 @@ class Doctor extends AuthUser
     {
         return [
             'created_at' => 'datetime',
+            'experience_years' => 'integer',
         ];
     }
 
@@ -63,6 +67,16 @@ class Doctor extends AuthUser
     public function sessionLogs()
     {
         return $this->hasMany(DoctorSessionLog::class, 'doctor_id', 'doctor_id');
+    }
+
+    public function reviews()
+    {
+        return $this->hasMany(DoctorReview::class, 'doctor_id', 'doctor_id');
+    }
+
+    public function announcements()
+    {
+        return $this->hasMany(ClinicAnnouncement::class, 'doctor_id', 'doctor_id');
     }
 
     /* ---------------------------------------------------------------------
@@ -91,6 +105,35 @@ class Doctor extends AuthUser
         );
     }
 
+    /** e.g. "12 years experience", or null when the admin left it blank. */
+    public function getExperienceLabelAttribute(): ?string
+    {
+        return $this->experience_years
+            ? $this->experience_years.' year'.($this->experience_years === 1 ? '' : 's').' experience'
+            : null;
+    }
+
+    /** Attaches aggregate columns loaded by {@see withRatingSummary()}. */
+    public function getRatingAverageAttribute(): ?float
+    {
+        $average = $this->attributes['rating_average'] ?? null;
+
+        return $average !== null ? round((float) $average, 1) : null;
+    }
+
+    public function getRatingCountAttribute(): int
+    {
+        return (int) ($this->attributes['rating_count'] ?? 0);
+    }
+
+    /** Filled/empty stars for the rating summary, e.g. "★★★★☆". */
+    public function getStarsAttribute(): string
+    {
+        $rating = $this->rating_average ?? 0;
+
+        return str_repeat('★', (int) round($rating)).str_repeat('☆', DoctorReview::MAX_RATING - (int) round($rating));
+    }
+
     /* ---------------------------------------------------------------------
      | Scopes
      | ------------------------------------------------------------------- */
@@ -105,5 +148,32 @@ class Doctor extends AuthUser
                     ->orWhere('email', 'like', '%'.$term.'%');
             });
         });
+    }
+
+    /**
+     * Attach `rating_average` / `rating_count` for the public "best doctor" slider.
+     *
+     * @param  int|null  $clinicId  Restrict the average to one clinic when given.
+     */
+    public function scopeWithRatingSummary(Builder $query, ?int $clinicId = null): Builder
+    {
+        $ratings = DoctorReview::query()
+            ->selectRaw('doctor_id, AVG(rating) as rating_average, COUNT(*) as rating_count')
+            ->where('is_public', true)
+            ->when($clinicId, fn (Builder $inner) => $inner->where('clinic_id', $clinicId))
+            ->groupBy('doctor_id');
+
+        return $query
+            ->leftJoinSub($ratings, 'rating_summary', 'rating_summary.doctor_id', 'doctors.doctor_id')
+            ->addSelect(['doctors.*', 'rating_summary.rating_average', 'rating_summary.rating_count']);
+    }
+
+    /** Doctors that already have at least one public rating. */
+    public function scopeRatedByPublic(Builder $query): Builder
+    {
+        return $query->whereIn(
+            'doctor_id',
+            DoctorReview::query()->public()->select('doctor_id')->distinct()
+        );
     }
 }

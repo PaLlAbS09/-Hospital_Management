@@ -136,6 +136,8 @@ class AdminController extends Controller
             'email' => $request->string('email')->trim()->lower()->toString(),
             'contact' => $request->string('contact')->trim()->toString(),
             'password' => Hash::make($request->string('password')->toString()),
+            'experience_years' => $request->integer('experience_years') ?: null,
+            'experience_note' => $request->input('experience_note'),
         ]);
 
         return redirect()->route('admin.doctors.index')

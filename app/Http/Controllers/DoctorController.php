@@ -100,9 +100,9 @@ class DoctorController extends Controller
     }
 
     /**
-     * Mark an appointment as `Completed`.
+     * Mark an appointment as `Completed` and ask the patient to rate the doctor.
      */
-    public function complete(Appointment $appointment): RedirectResponse
+    public function complete(Appointment $appointment, AppointmentBookingService $bookings): RedirectResponse
     {
         $this->authorizeAppointment($appointment);
 
@@ -110,9 +110,14 @@ class DoctorController extends Controller
             return back()->with('error', 'Only active appointments can be marked as completed.');
         }
 
-        $appointment->update(['status' => Appointment::STATUS_COMPLETED]);
+        try {
+            $bookings->complete($appointment);
+        } catch (AppointmentBookingException $exception) {
+            return back()->with('error', $exception->getMessage());
+        }
 
-        return back()->with('success', 'Appointment for '.$appointment->patient->full_name.' marked as completed.');
+        return back()->with('success', 'Appointment for '.$appointment->patient->full_name.' marked as completed. '
+            .'The patient has been asked to rate the doctor.');
     }
 
     /**

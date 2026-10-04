@@ -7,6 +7,7 @@ use App\Models\Clinic;
 use App\Models\ClinicSchedule;
 use App\Models\Patient;
 use App\Notifications\AppointmentNoShow;
+use App\Notifications\DoctorRatingRequest;
 use App\Support\Notifier;
 
 class AppointmentBookingService
@@ -92,6 +93,9 @@ class AppointmentBookingService
 
     /**
      * Mark arrival for an active appointment (admin / receptionist / clinic).
+     *
+     * The patient is asked for a rating as soon as they are marked as arrived,
+     * so feedback is captured at the end of the visit rather than forgotten.
      */
     public function checkIn(Appointment $appointment): Appointment
     {
@@ -111,7 +115,56 @@ class AppointmentBookingService
 
         $appointment->update(['checked_in_at' => now()]);
 
-        return $appointment->fresh();
+        $appointment = $appointment->fresh();
+
+        $this->requestRating($appointment);
+
+        return $appointment;
+    }
+
+    /**
+     * Mark an active appointment as completed and ask for a rating.
+     *
+     * @throws AppointmentBookingException
+     */
+    public function complete(Appointment $appointment): Appointment
+    {
+        if ($appointment->status !== Appointment::STATUS_ACTIVE) {
+            throw new AppointmentBookingException('Only active appointments can be marked as completed.');
+        }
+
+        $appointment->update(['status' => Appointment::STATUS_COMPLETED]);
+
+        $appointment = $appointment->fresh();
+
+        $this->requestRating($appointment);
+
+        return $appointment;
+    }
+
+    /**
+     * Send the "rate your doctor" notification exactly once per appointment.
+     *
+     * The `rating_request_sent_at` stamp makes the call idempotent, so both the
+     * check-in and the completion flow can safely trigger it.
+     */
+    protected function requestRating(Appointment $appointment): void
+    {
+        if (! Appointment::hasDatabaseColumn('rating_request_sent_at')) {
+            return;
+        }
+
+        if (filled($appointment->rating_request_sent_at) || $appointment->review()->exists()) {
+            return;
+        }
+
+        $appointment->update(['rating_request_sent_at' => now()]);
+
+        $appointment->loadMissing(['patient', 'doctor', 'clinic']);
+
+        if ($appointment->patient) {
+            Notifier::send($appointment->patient, new DoctorRatingRequest($appointment));
+        }
     }
 
     /**

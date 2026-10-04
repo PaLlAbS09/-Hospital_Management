@@ -57,6 +57,18 @@
                                                 </button>
                                             </form>
                                         @endif
+
+                                        @if ($appointment->is_reviewable && ! $appointment->review)
+                                            <a href="{{ route('patient.appointments.review.create', $appointment) }}"
+                                               class="btn btn-sm btn-hms">
+                                                <i class="bi bi-star me-1"></i>Rate
+                                            </a>
+                                        @elseif ($appointment->review)
+                                            <span class="btn btn-sm btn-outline-success disabled">
+                                                <i class="bi bi-check2 me-1"></i>{{ $appointment->review->rating }}/5
+                                            </span>
+                                        @endif
+
                                         @if ($appointment->has_prescription)
                                             <a href="{{ route('patient.appointments.prescription', $appointment) }}"
                                                class="btn btn-sm btn-outline-hms" target="_blank" rel="noopener">

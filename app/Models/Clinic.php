@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as AuthUser;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Str;
 
 class Clinic extends AuthUser
 {
@@ -35,6 +36,8 @@ class Clinic extends AuthUser
         'password',
         'contact_number',
         'status',
+        'about',
+        'banner_image',
     ];
 
     protected $hidden = [
@@ -68,6 +71,27 @@ class Clinic extends AuthUser
     public function appointments()
     {
         return $this->hasMany(Appointment::class, 'clinic_id', 'clinic_id');
+    }
+
+    public function announcements()
+    {
+        return $this->hasMany(ClinicAnnouncement::class, 'clinic_id', 'clinic_id');
+    }
+
+    public function offers()
+    {
+        return $this->hasMany(ClinicOffer::class, 'clinic_id', 'clinic_id');
+    }
+
+    public function reviews()
+    {
+        return $this->hasMany(DoctorReview::class, 'clinic_id', 'clinic_id');
+    }
+
+    /** Distinct doctors this clinic has ever published a schedule for. */
+    public function doctors()
+    {
+        return $this->belongsToMany(Doctor::class, 'clinic_schedules', 'clinic_id', 'doctor_id');
     }
 
     /* ---------------------------------------------------------------------
@@ -106,6 +130,22 @@ class Clinic extends AuthUser
             ->implode('');
 
         return $initials !== '' ? $initials : 'CL';
+    }
+
+    /** True once the clinic has written about text or uploaded a banner. */
+    public function getHasAboutSectionAttribute(): bool
+    {
+        return filled($this->about) || filled($this->banner_image);
+    }
+
+    /** Fallback gradient for clinics that never uploaded a banner image. */
+    public function getBannerUrlAttribute(): ?string
+    {
+        return filled($this->banner_image)
+            ? Str::startsWith($this->banner_image, ['http://', 'https://', '/'])
+                ? $this->banner_image
+                : asset('storage/'.$this->banner_image)
+            : null;
     }
 
     /* ---------------------------------------------------------------------

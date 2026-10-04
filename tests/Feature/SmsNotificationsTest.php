@@ -54,9 +54,9 @@ class SmsNotificationsTest extends TestCase
     }
 
     /**
-     * Create a bookable schedule for tomorrow and return [patient, schedule, date].
+     * Create a bookable schedule for tomorrow and return [doctor, schedule, date].
      *
-     * @return array{0: Patient, 1: ClinicSchedule, 2: string}
+     * @return array{0: Doctor, 1: ClinicSchedule, 2: string}
      */
     private function bookableSlot(): array
     {
@@ -275,10 +275,6 @@ class SmsNotificationsTest extends TestCase
 
             $this->assertIsInt($smsPosition);
             $this->assertIsInt($mailPosition);
-
-            // Laravel aborts the whole channel loop when one channel throws.
-            // SmsChannel never throws, so it must run first; otherwise a broken
-            // SMTP server would stop the SMS from ever being attempted.
             $this->assertLessThan($mailPosition, $smsPosition);
         }
     }

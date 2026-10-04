@@ -45,6 +45,23 @@
                     @error('contact') <div class="invalid-feedback">{{ $message }}</div> @enderror
                 </div>
 
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold" for="experience_years">Years of experience</label>
+                    <input type="number" class="form-control @error('experience_years') is-invalid @enderror"
+                           id="experience_years" name="experience_years"
+                           value="{{ old('experience_years') }}" min="0" max="70" placeholder="e.g. 12">
+                    <div class="form-text">Shown on the clinic about section and the doctor's public profile.</div>
+                    @error('experience_years') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                </div>
+
+                <div class="col-12">
+                    <label class="form-label fw-semibold" for="experience_note">Experience summary</label>
+                    <textarea class="form-control @error('experience_note') is-invalid @enderror"
+                              id="experience_note" name="experience_note" rows="3"
+                              placeholder="e.g. 18 years in joint replacement and sports injury surgery.">{{ old('experience_note') }}</textarea>
+                    @error('experience_note') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                </div>
+
                 <div class="col-12">
                     <label class="form-label fw-semibold" for="email">Email address</label>
                     <input type="email" id="email" name="email" value="{{ old('email') }}"

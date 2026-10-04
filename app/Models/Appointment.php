@@ -51,6 +51,7 @@ class Appointment extends Model
         'disease',
         'allergies',
         'prescription_details',
+        'rating_request_sent_at',
     ];
 
     protected $attributes = [
@@ -65,6 +66,7 @@ class Appointment extends Model
         return [
             'appointment_date' => 'date',
             'checked_in_at' => 'datetime',
+            'rating_request_sent_at' => 'datetime',
         ];
     }
 
@@ -139,6 +141,16 @@ class Appointment extends Model
             || filled($this->allergies);
     }
 
+    /**
+     * A patient may only rate a session that actually finished, and only once.
+     *
+     * Cancelled and no-show appointments are excluded on purpose.
+     */
+    public function getIsReviewableAttribute(): bool
+    {
+        return $this->status === self::STATUS_COMPLETED;
+    }
+
     /** Human readable appointment time (drops the seconds part). */
     public function getFormattedTimeAttribute(): string
     {
@@ -198,6 +210,11 @@ class Appointment extends Model
     public function doctor()
     {
         return $this->belongsTo(Doctor::class, 'doctor_id', 'doctor_id');
+    }
+
+    public function review()
+    {
+        return $this->hasOne(DoctorReview::class, 'appointment_id', 'appointment_id');
     }
 
     /* ---------------------------------------------------------------------

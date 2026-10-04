@@ -3,14 +3,17 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\Patient\StoreAppointmentRequest;
+use App\Http\Requests\Patient\StoreReviewRequest;
 use App\Models\Appointment;
 use App\Models\Clinic;
 use App\Models\ClinicSchedule;
+use App\Models\DoctorReview;
 use App\Models\Patient;
 use App\Notifications\AppointmentCancelled;
 use App\Notifications\AppointmentConfirmed;
 use App\Services\AppointmentBookingException;
 use App\Services\AppointmentBookingService;
+use App\Services\ClinicProfileService;
 use App\Support\Notifier;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -51,12 +54,14 @@ class PatientController extends Controller
             'completed' => $appointments->where('status', Appointment::STATUS_COMPLETED)->count(),
             'cancelled' => $appointments->whereIn('status', Appointment::cancelledStatuses())->count(),
             'prescriptions' => $appointments->filter(fn (Appointment $appointment) => $appointment->has_prescription)->count(),
+            'pendingReviews' => $patient->pendingReviewAppointments()->count(),
         ];
 
         return view('patient.dashboard', [
             'patient' => $patient,
             'appointments' => $appointments,
             'upcoming' => $upcoming,
+            'pendingReviews' => $patient->pendingReviewAppointments(),
             'stats' => $stats,
             'today' => $today,
         ]);
@@ -69,7 +74,7 @@ class PatientController extends Controller
     /**
      * Step 1 - filter approved clinics by geographic area.
      */
-    public function clinics(Request $request): View
+    public function clinics(Request $request, ClinicProfileService $profile): View
     {
         $area = $request->string('area')->trim()->toString();
 
@@ -93,7 +98,21 @@ class PatientController extends Controller
             'area' => $area,
             'areas' => $areas,
             'clinics' => $clinics,
+            // About snippet, live offers, new-doctor promos and public rating
+            // per clinic, so a patient can compare before opening one.
+            'summaries' => $profile->summarise($clinics->getCollection()),
         ]);
+    }
+
+    /**
+     * Step 2 - "why choose this clinic": about section, offers, new doctors,
+     * doctor ratings and patient reviews, before moving on to slot booking.
+     */
+    public function clinicProfile(Clinic $clinic, ClinicProfileService $profile): View
+    {
+        abort_unless($clinic->is_approved, 404, 'This clinic is not available for booking.');
+
+        return view('patient.clinic_profile', $profile->forClinic($clinic));
     }
 
     /**
@@ -197,6 +216,57 @@ class PatientController extends Controller
     }
 
     /**
+     * Rate a completed session and share the experience with other patients.
+     */
+    public function review(Appointment $appointment): View
+    {
+        $this->authorizeAppointment($appointment);
+
+        abort_unless($appointment->is_reviewable, 404, 'Only completed appointments can be rated.');
+
+        $appointment->load(['doctor', 'clinic', 'review']);
+
+        abort_if($appointment->review !== null, 404, 'You have already reviewed this appointment.');
+
+        return view('patient.review', [
+            'appointment' => $appointment,
+            'ratingScale' => DoctorReview::ratingScale(),
+        ]);
+    }
+
+    /**
+     * Store the rating. One review per appointment, enforced by a unique index.
+     */
+    public function storeReview(StoreReviewRequest $request, Appointment $appointment): RedirectResponse
+    {
+        $this->authorizeAppointment($appointment);
+
+        if (! $appointment->is_reviewable) {
+            return back()->with('error', 'Only completed appointments can be rated.');
+        }
+
+        if ($appointment->review()->exists()) {
+            return back()->with('error', 'You have already reviewed this appointment.');
+        }
+
+        $patient = $this->patient();
+
+        DoctorReview::create([
+            'appointment_id' => $appointment->appointment_id,
+            'patient_id' => $patient->patient_id,
+            'doctor_id' => $appointment->doctor_id,
+            'clinic_id' => $appointment->clinic_id,
+            'rating' => $request->integer('rating'),
+            'experience' => $request->input('experience'),
+            'is_public' => $request->boolean('is_public', true),
+        ]);
+
+        $appointment->load('doctor');
+
+        return back()->with('success', 'Thank you! Your rating for Dr. '.$appointment->doctor->full_name.' has been published.');
+    }
+
+    /**
      * Printable prescription.
      */
     public function prescription(Appointment $appointment): View
@@ -216,6 +286,12 @@ class PatientController extends Controller
         abort_unless($patient instanceof Patient, 403);
 
         return $patient;
+    }
+
+    /** Patients may only reach their own appointments. */
+    protected function authorizeAppointment(Appointment $appointment): void
+    {
+        abort_unless($appointment->patient_id === $this->patient()->patient_id, 403);
     }
 
     protected function normaliseDate(?string $date): string

@@ -31,6 +31,8 @@ trait CreatesHospitalSchema
             $table->string('contact_number', 15);
             $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending');
             $table->timestamp('created_at')->nullable();
+            $table->text('about')->nullable();
+            $table->string('banner_image')->nullable();
         });
 
         Schema::create('doctors', function (Blueprint $table) {
@@ -42,6 +44,8 @@ trait CreatesHospitalSchema
             $table->string('contact', 15);
             $table->string('password');
             $table->timestamp('created_at')->nullable();
+            $table->unsignedSmallInteger('experience_years')->nullable();
+            $table->text('experience_note')->nullable();
         });
 
         Schema::create('patients', function (Blueprint $table) {
@@ -79,6 +83,43 @@ trait CreatesHospitalSchema
             $table->string('disease')->nullable();
             $table->string('allergies')->nullable();
             $table->text('prescription_details')->nullable();
+            $table->timestamp('rating_request_sent_at')->nullable();
+        });
+
+        Schema::create('clinic_announcements', function (Blueprint $table) {
+            $table->increments('announcement_id');
+            $table->unsignedInteger('clinic_id');
+            $table->unsignedInteger('doctor_id')->nullable();
+            $table->string('department', 100);
+            $table->date('joining_date')->nullable();
+            $table->time('joining_time')->nullable();
+            $table->text('message')->nullable();
+            $table->boolean('is_active')->default(true);
+            $table->timestamp('created_at')->nullable();
+        });
+
+        Schema::create('clinic_offers', function (Blueprint $table) {
+            $table->increments('offer_id');
+            $table->unsignedInteger('clinic_id');
+            $table->string('title', 150);
+            $table->text('description')->nullable();
+            $table->unsignedTinyInteger('discount_percent');
+            $table->date('valid_from')->nullable();
+            $table->date('valid_until')->nullable();
+            $table->boolean('is_active')->default(true);
+            $table->timestamp('created_at')->nullable();
+        });
+
+        Schema::create('doctor_reviews', function (Blueprint $table) {
+            $table->increments('review_id');
+            $table->unsignedInteger('appointment_id')->unique();
+            $table->unsignedInteger('patient_id');
+            $table->unsignedInteger('doctor_id');
+            $table->unsignedInteger('clinic_id');
+            $table->unsignedTinyInteger('rating');
+            $table->text('experience')->nullable();
+            $table->boolean('is_public')->default(true);
+            $table->timestamps();
         });
 
         Schema::create('doctor_session_logs', function (Blueprint $table) {

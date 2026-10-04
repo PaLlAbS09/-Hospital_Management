@@ -20,6 +20,8 @@ Route::get('/', [HomeController::class, 'index'])->name('home');
 
 Route::get('/clinics', [HomeController::class, 'clinics'])->name('clinics.index');
 
+Route::get('/clinics/{clinic}', [HomeController::class, 'clinicProfile'])->name('clinics.show');
+
 Route::post('/contact', [HomeController::class, 'storeQuery'])
     ->middleware('throttle:10,1')
     ->name('contact.store');
@@ -144,6 +146,26 @@ Route::middleware(['auth:clinic', 'clinic.approval', 'role:clinic'])
         Route::get('appointments', [ClinicController::class, 'appointments'])->name('appointments.index');
         Route::post('appointments/{appointment}/check-in', [ClinicController::class, 'checkIn'])
             ->name('appointments.check-in');
+
+        // Public about section (banner image + description)
+        Route::get('about', [ClinicController::class, 'editAbout'])->name('about.edit');
+        Route::put('about', [ClinicController::class, 'updateAbout'])->name('about.update');
+
+        // "New doctor joining" promotions shown on the landing page slider
+        Route::get('announcements', [ClinicController::class, 'announcements'])->name('announcements.index');
+        Route::post('announcements', [ClinicController::class, 'storeAnnouncement'])->name('announcements.store');
+        Route::patch('announcements/{announcement}/toggle', [ClinicController::class, 'toggleAnnouncement'])
+            ->name('announcements.toggle');
+        Route::delete('announcements/{announcement}', [ClinicController::class, 'destroyAnnouncement'])
+            ->name('announcements.destroy');
+
+        // Discount offers shown on the landing page slider
+        Route::get('offers', [ClinicController::class, 'offers'])->name('offers.index');
+        Route::post('offers', [ClinicController::class, 'storeOffer'])->name('offers.store');
+        Route::patch('offers/{offer}/toggle', [ClinicController::class, 'toggleOffer'])
+            ->name('offers.toggle');
+        Route::delete('offers/{offer}', [ClinicController::class, 'destroyOffer'])
+            ->name('offers.destroy');
     });
 
 /*
@@ -185,6 +207,7 @@ Route::middleware(['auth:patient', 'role:patient'])
 
         // Search & booking engine
         Route::get('clinics', [PatientController::class, 'clinics'])->name('clinics.index');
+        Route::get('clinics/{clinic}', [PatientController::class, 'clinicProfile'])->name('clinics.show');
         Route::get('clinics/{clinic}/doctors', [PatientController::class, 'clinicDoctors'])->name('clinics.doctors');
         Route::get('clinics/{clinic}/availability', [PatientController::class, 'clinicAvailability'])->name('clinics.availability');
         Route::post('appointments', [PatientController::class, 'book'])->name('appointments.store');
@@ -192,4 +215,10 @@ Route::middleware(['auth:patient', 'role:patient'])
             ->name('appointments.cancel');
         Route::get('appointments/{appointment}/prescription', [PatientController::class, 'prescription'])
             ->name('appointments.prescription');
+
+        // Rating & experience shared after a completed session
+        Route::get('appointments/{appointment}/review', [PatientController::class, 'review'])
+            ->name('appointments.review.create');
+        Route::post('appointments/{appointment}/review', [PatientController::class, 'storeReview'])
+            ->name('appointments.review.store');
     });

@@ -3,8 +3,16 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\Public\StoreContactQueryRequest;
+use App\Models\Appointment;
 use App\Models\Clinic;
+use App\Models\ClinicAnnouncement;
+use App\Models\ClinicOffer;
+use App\Models\Doctor;
+use App\Models\Patient;
 use App\Models\SystemQuery;
+use App\Services\ClinicProfileService;
+use App\Services\DoctorRatingService;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -14,7 +22,7 @@ use Illuminate\View\View;
  */
 class HomeController extends Controller
 {
-    public function index(Request $request): View
+    public function index(Request $request, DoctorRatingService $ratings): View
     {
         $area = $request->string('area')->trim()->toString();
 
@@ -38,10 +46,50 @@ class HomeController extends Controller
             'areas' => $areas,
             'clinics' => $clinics,
             'totalClinics' => Clinic::approved()->count(),
-            'totalDoctors' => \App\Models\Doctor::count(),
-            'totalPatients' => \App\Models\Patient::count(),
-            'totalAppointments' => \App\Models\Appointment::count(),
+            'totalDoctors' => Doctor::count(),
+            'totalPatients' => Patient::count(),
+            'totalAppointments' => Appointment::count(),
+            'announcements' => $this->activeAnnouncements(),
+            'offers' => $this->activeOffers(),
+            'topDoctors' => $ratings->leaderboard(limit: 10),
         ]);
+    }
+
+    /**
+     * New-doctor promotions from approved clinics, for the landing page slider.
+     *
+     * @return Collection<int, ClinicAnnouncement>
+     */
+    protected function activeAnnouncements()
+    {
+        $approvedClinicIds = Clinic::query()->approved()->pluck('clinic_id');
+
+        return ClinicAnnouncement::query()
+            ->with(['clinic', 'doctor'])
+            ->active()
+            ->whereIn('clinic_id', $approvedClinicIds)
+            ->orderByRaw('joining_date IS NULL, joining_date ASC')
+            ->orderByDesc('announcement_id')
+            ->limit(8)
+            ->get();
+    }
+
+    /**
+     * Current discount offers from approved clinics, same slider.
+     *
+     * @return Collection<int, ClinicOffer>
+     */
+    protected function activeOffers()
+    {
+        $approvedClinicIds = Clinic::query()->approved()->pluck('clinic_id');
+
+        return ClinicOffer::query()
+            ->with('clinic')
+            ->current()
+            ->whereIn('clinic_id', $approvedClinicIds)
+            ->latestFirst()
+            ->limit(8)
+            ->get();
     }
 
     /**
@@ -68,6 +116,16 @@ class HomeController extends Controller
             ->withQueryString();
 
         return view('public.clinics', compact('area', 'areas', 'clinics'));
+    }
+
+    /**
+     * Public profile of one clinic: about section, banner, doctors and reviews.
+     */
+    public function clinicProfile(Clinic $clinic, ClinicProfileService $profile): View
+    {
+        abort_unless($clinic->is_approved, 404, 'This clinic is not available publicly.');
+
+        return view('public.clinic_profile', $profile->forClinic($clinic));
     }
 
     /**

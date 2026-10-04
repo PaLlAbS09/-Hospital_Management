@@ -49,6 +49,9 @@ class Navigation
                 ['label' => 'Dashboard', 'route' => 'clinic.dashboard', 'icon' => 'bi-speedometer2', 'match' => 'clinic.dashboard'],
                 ['label' => 'Schedules', 'route' => 'clinic.schedules.index', 'icon' => 'bi-calendar3', 'match' => 'clinic.schedules.*'],
                 ['label' => 'Appointments', 'route' => 'clinic.appointments.index', 'icon' => 'bi-calendar2-check', 'match' => 'clinic.appointments.*'],
+                ['label' => 'About section', 'route' => 'clinic.about.edit', 'icon' => 'bi-card-image', 'match' => 'clinic.about.*'],
+                ['label' => 'New doctor promos', 'route' => 'clinic.announcements.index', 'icon' => 'bi-megaphone', 'match' => 'clinic.announcements.*'],
+                ['label' => 'Discount offers', 'route' => 'clinic.offers.index', 'icon' => 'bi-percent', 'match' => 'clinic.offers.*'],
             ],
             'doctor' => [
                 ['label' => 'Dashboard', 'route' => 'doctor.dashboard', 'icon' => 'bi-speedometer2', 'match' => 'doctor.dashboard'],
@@ -76,7 +79,7 @@ class Navigation
             ],
             'clinic' => [
                 ['label' => 'Publish schedule', 'route' => 'clinic.schedules.index', 'icon' => 'bi-calendar-plus'],
-                ['label' => 'Today at a glance', 'route' => 'clinic.appointments.index', 'icon' => 'bi-calendar2-check'],
+                ['label' => 'Post a discount offer', 'route' => 'clinic.offers.index', 'icon' => 'bi-percent'],
             ],
             'doctor' => [
                 ['label' => 'Open queue', 'route' => 'doctor.queue', 'icon' => 'bi-list-check'],

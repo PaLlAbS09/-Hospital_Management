@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as AuthUser;
 use Illuminate\Notifications\Notifiable;
@@ -58,6 +59,25 @@ class Patient extends AuthUser
     public function activeAppointments()
     {
         return $this->appointments()->where('status', Appointment::STATUS_ACTIVE);
+    }
+
+    public function reviews()
+    {
+        return $this->hasMany(DoctorReview::class, 'patient_id', 'patient_id');
+    }
+
+    /**
+     * Completed appointments that are still waiting for a rating.
+     *
+     * @return Collection<int, Appointment>
+     */
+    public function pendingReviewAppointments()
+    {
+        return $this->appointments()
+            ->status(Appointment::STATUS_COMPLETED)
+            ->whereDoesntHave('review')
+            ->orderByDesc('appointment_date')
+            ->get();
     }
 
     /* ---------------------------------------------------------------------
