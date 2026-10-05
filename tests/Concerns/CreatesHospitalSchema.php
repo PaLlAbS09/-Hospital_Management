@@ -26,6 +26,9 @@ trait CreatesHospitalSchema
             $table->increments('clinic_id');
             $table->string('clinic_name', 100);
             $table->string('area', 100);
+            $table->string('address', 255)->nullable();
+            $table->decimal('latitude', 10, 7)->nullable();
+            $table->decimal('longitude', 10, 7)->nullable();
             $table->string('email', 100)->unique();
             $table->string('password');
             $table->string('contact_number', 15);

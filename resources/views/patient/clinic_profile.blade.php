@@ -42,6 +42,9 @@
 
                 <ul class="hms-prof__meta">
                     <li><i class="bi bi-geo-alt-fill"></i>{{ $clinic->area }}</li>
+                    @if ($clinic->address)
+                        <li><i class="bi bi-pin-map-fill"></i>{{ $clinic->address }}</li>
+                    @endif
                     <li><i class="bi bi-telephone-fill"></i>{{ $clinic->contact_number }}</li>
                     <li><i class="bi bi-envelope-fill"></i>{{ $clinic->email }}</li>
                 </ul>
@@ -117,6 +120,9 @@
                     </a>
                 </div>
             </div>
+
+            {{-- Where the clinic is, so a patient can plan the visit ----- --}}
+            <x-clinic-map :clinic="$clinic" class="mt-4" />
         </div>
     </section>
 

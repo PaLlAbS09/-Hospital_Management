@@ -151,6 +151,10 @@ Route::middleware(['auth:clinic', 'clinic.approval', 'role:clinic'])
         Route::get('about', [ClinicController::class, 'editAbout'])->name('about.edit');
         Route::put('about', [ClinicController::class, 'updateAbout'])->name('about.update');
 
+        // Contact details and map location shown to patients
+        Route::get('profile', [ClinicController::class, 'editProfile'])->name('profile.edit');
+        Route::put('profile', [ClinicController::class, 'updateProfile'])->name('profile.update');
+
         // "New doctor joining" promotions shown on the landing page slider
         Route::get('announcements', [ClinicController::class, 'announcements'])->name('announcements.index');
         Route::post('announcements', [ClinicController::class, 'storeAnnouncement'])->name('announcements.store');

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\Clinic\StoreAnnouncementRequest;
 use App\Http\Requests\Clinic\StoreOfferRequest;
 use App\Http\Requests\Clinic\UpdateClinicAboutRequest;
+use App\Http\Requests\Clinic\UpdateClinicProfileRequest;
 use App\Models\Appointment;
 use App\Models\Clinic;
 use App\Models\ClinicAnnouncement;
@@ -137,8 +138,44 @@ class ClinicController extends Controller
     }
 
     /* ---------------------------------------------------------------------
+     | Clinic details (name, contact number and map location)
+     * ------------------------------------------------------------------- */
+
+    /**
+     * Edit the details patients see: name, area, phone, address and map pin.
+     */
+    public function editProfile(): View
+    {
+        return view('clinic.profile', ['clinic' => $this->clinic()]);
+    }
+
+    public function updateProfile(UpdateClinicProfileRequest $request): RedirectResponse
+    {
+        $clinic = $this->clinic();
+
+        $clinic->fill([
+            'clinic_name' => $request->string('clinic_name')->trim()->toString(),
+            'area' => $request->string('area')->trim()->toString(),
+            'contact_number' => $request->string('contact_number')->trim()->toString(),
+            'address' => $request->string('address')->trim()->toString() ?: null,
+            // An empty coordinate box means "let Google Maps find the address".
+            'latitude' => $request->filled('latitude') ? (float) $request->input('latitude') : null,
+            'longitude' => $request->filled('longitude') ? (float) $request->input('longitude') : null,
+        ]);
+
+        // An empty email box leaves the clinic's login address untouched.
+        if ($request->filled('email')) {
+            $clinic->email = $request->string('email')->trim()->toString();
+        }
+
+        $clinic->save();
+
+        return back()->with('success', 'Your clinic details have been updated and are live on the website.');
+    }
+
+    /* ---------------------------------------------------------------------
      | About section (banner image + clinic description)
-     | ------------------------------------------------------------------- */
+     * ------------------------------------------------------------------- */
 
     /**
      * Edit the public "about" block of the clinic.

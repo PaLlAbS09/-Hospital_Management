@@ -15,14 +15,27 @@ class ClinicFactory extends Factory
 
     public function definition(): array
     {
+        $area = $this->faker->randomElement(['Bardhaman', 'Kolkata', 'Durgapur', 'Asansol', 'Howrah', 'Siliguri']);
+
         return [
             'clinic_name' => $this->faker->company().' Clinic',
-            'area' => $this->faker->randomElement(['Bardhaman', 'Kolkata', 'Durgapur', 'Asansol', 'Howrah', 'Siliguri']),
+            'area' => $area,
+            'address' => $this->faker->streetAddress().', '.$area,
             'email' => $this->faker->unique()->companyEmail(),
             'password' => Hash::make('password'),
             'contact_number' => $this->faker->numerify('9#########'),
             'status' => Clinic::STATUS_APPROVED,
         ];
+    }
+
+    /** A clinic that never told us where it is, so it cannot be pinned. */
+    public function withoutAddress(): static
+    {
+        return $this->state(fn () => [
+            'address' => null,
+            'latitude' => null,
+            'longitude' => null,
+        ]);
     }
 
     public function pending(): static

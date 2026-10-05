@@ -49,6 +49,7 @@ class Navigation
                 ['label' => 'Dashboard', 'route' => 'clinic.dashboard', 'icon' => 'bi-speedometer2', 'match' => 'clinic.dashboard'],
                 ['label' => 'Schedules', 'route' => 'clinic.schedules.index', 'icon' => 'bi-calendar3', 'match' => 'clinic.schedules.*'],
                 ['label' => 'Appointments', 'route' => 'clinic.appointments.index', 'icon' => 'bi-calendar2-check', 'match' => 'clinic.appointments.*'],
+                ['label' => 'Clinic details', 'route' => 'clinic.profile.edit', 'icon' => 'bi-building', 'match' => 'clinic.profile.*'],
                 ['label' => 'About section', 'route' => 'clinic.about.edit', 'icon' => 'bi-card-image', 'match' => 'clinic.about.*'],
                 ['label' => 'New doctor promos', 'route' => 'clinic.announcements.index', 'icon' => 'bi-megaphone', 'match' => 'clinic.announcements.*'],
                 ['label' => 'Discount offers', 'route' => 'clinic.offers.index', 'icon' => 'bi-percent', 'match' => 'clinic.offers.*'],

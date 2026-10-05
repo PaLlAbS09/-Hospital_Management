@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\GoogleMaps;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as AuthUser;
 use Illuminate\Notifications\Notifiable;
@@ -32,6 +33,9 @@ class Clinic extends AuthUser
     protected $fillable = [
         'clinic_name',
         'area',
+        'address',
+        'latitude',
+        'longitude',
         'email',
         'password',
         'contact_number',
@@ -56,6 +60,8 @@ class Clinic extends AuthUser
     {
         return [
             'created_at' => 'datetime',
+            'latitude' => 'float',
+            'longitude' => 'float',
         ];
     }
 
@@ -146,6 +152,40 @@ class Clinic extends AuthUser
                 ? $this->banner_image
                 : asset('storage/'.$this->banner_image)
             : null;
+    }
+
+    /** Street address and area on one line, e.g. "Rakhal Pirtala, Burdwan". */
+    public function getFullAddressAttribute(): string
+    {
+        return collect([$this->address, $this->area])
+            ->map(fn (?string $part) => filled($part) ? trim($part) : null)
+            ->filter()
+            ->unique()
+            ->implode(', ');
+    }
+
+    /** True when the clinic pinned its exact position instead of a place name. */
+    public function getHasCoordinatesAttribute(): bool
+    {
+        return $this->latitude !== null && $this->longitude !== null;
+    }
+
+    /**
+     * What Google Maps is asked for: coordinates when known, otherwise the
+     * address a patient reads, otherwise null when the clinic cannot be found.
+     */
+    public function getMapQueryAttribute(): ?string
+    {
+        if ($this->has_coordinates) {
+            return $this->latitude.','.$this->longitude;
+        }
+
+        return filled($this->full_address) ? $this->full_address : null;
+    }
+
+    public function getDirectionsUrlAttribute(): ?string
+    {
+        return $this->map_query ? GoogleMaps::directionsUrl($this->map_query) : null;
     }
 
     /* ---------------------------------------------------------------------
