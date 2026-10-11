@@ -4,17 +4,19 @@
 ])
 
 @php
+    // Clinical semantic palette: emerald = confirmed/completed, amber = pending,
+    // rose/red = cancellations & no-shows, blue/teal = active/approved.
     $variant = match ($status) {
-        'approved', 'Completed' => 'success',
-        'pending' => 'warning',
+        'approved', 'Completed', 'Confirmed' => 'success',
+        'pending', 'Pending' => 'warning',
         'rejected', 'Cancelled_by_Doctor' => 'danger',
         'Active' => 'primary',
-        'Cancelled_by_Patient' => 'secondary',
-        'No_Show' => 'dark',
+        'Cancelled_by_Patient', 'No_Show' => 'dark',
         default => 'secondary',
     };
 
     $text = $label ?? \Illuminate\Support\Str::headline(str_replace('_', ' ', (string) $status));
 @endphp
 
-<span {{ $attributes->merge(['class' => 'badge text-bg-'.$variant]) }}>{{ $text }}</span>
+<span {{ $attributes->merge(['class' => 'badge hms-badge hms-badge--'.$variant]) }}>{{ $text }}</span>
+

@@ -4,21 +4,21 @@
 --}}
 <style>
     :root {
-        --hms-primary: #4f46e5;
-        --hms-primary-dark: #4338ca;
-        --hms-primary-soft: #eef2ff;
-        --hms-accent: #0891b2;
-        --hms-accent-soft: #ecfeff;
+        --hms-primary: #0f766e;
+        --hms-primary-dark: #115e59;
+        --hms-primary-soft: #ccfbf1;
+        --hms-accent: #1d4ed8;
+        --hms-accent-soft: #eff6ff;
         --hms-ink: #0f172a;
-        --hms-muted: #64748b;
-        --hms-line: #e5e9f0;
-        --hms-canvas: #f4f6fb;
+        --hms-muted: #475569;
+        --hms-line: #e2e8f0;
+        --hms-canvas: #f1f5f9;
         --hms-sidebar: #101828;
         --hms-sidebar-soft: #1d2939;
         --hms-radius: 16px;
         --hms-radius-sm: 10px;
         --hms-shadow-sm: 0 1px 2px rgba(16, 24, 40, .05), 0 8px 24px -12px rgba(16, 24, 40, .18);
-        --hms-font: "Inter", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+        --hms-font: "Inter", "Roboto", system-ui, -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
     }
 
     * { -webkit-tap-highlight-color: transparent; }
@@ -47,10 +47,10 @@
         border-radius: 13px;
         display: grid;
         place-items: center;
-        background: linear-gradient(135deg, #6366f1, #06b6d4);
+        background: linear-gradient(135deg, #0f766e, #1d4ed8);
         color: #fff;
         font-size: 1.2rem;
-        box-shadow: 0 10px 22px -8px rgba(99, 102, 241, .7);
+        box-shadow: 0 10px 22px -8px rgba(15, 118, 110, .7);
         flex: 0 0 auto;
     }
 
@@ -87,7 +87,7 @@
         width: 272px;
         flex: 0 0 272px;
         background:
-            radial-gradient(420px 220px at 0% 0%, rgba(99, 102, 241, .35), transparent 65%),
+            radial-gradient(420px 220px at 0% 0%, rgba(20, 184, 166, .28), transparent 65%),
             linear-gradient(180deg, #101828 0%, #16223a 60%, #101828 100%);
         color: #cbd5e1;
         padding: 1.2rem 1rem 1.5rem;
@@ -150,10 +150,10 @@
     }
 
     .hms-nav-link.active {
-        background: linear-gradient(90deg, #6366f1, #06b6d4);
+        background: linear-gradient(90deg, #0f766e, #1d4ed8);
         color: #fff;
         font-weight: 600;
-        box-shadow: 0 10px 22px -10px rgba(6, 182, 212, .8);
+        box-shadow: 0 10px 22px -10px rgba(15, 118, 110, .8);
     }
 
     .hms-sidebar__footer {
