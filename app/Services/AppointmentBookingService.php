@@ -6,6 +6,7 @@ use App\Models\Appointment;
 use App\Models\Clinic;
 use App\Models\ClinicSchedule;
 use App\Models\Patient;
+use App\Notifications\AppointmentConfirmed;
 use App\Notifications\AppointmentNoShow;
 use App\Notifications\DoctorRatingRequest;
 use App\Support\Notifier;
@@ -21,8 +22,8 @@ class AppointmentBookingService
     {
         $clinic = Clinic::query()->find($clinicId);
 
-        if (! $clinic instanceof Clinic || ! $clinic->is_approved) {
-            throw new AppointmentBookingException('The selected clinic is not available for booking.');
+        if (! ($clinic instanceof Clinic) || ! $clinic->is_approved) {
+           throw new AppointmentBookingException('The selected clinic is not available for booking.');
         }
 
         $schedule = ClinicSchedule::query()
@@ -41,11 +42,11 @@ class AppointmentBookingService
 
         if ($schedule->bookedCount() >= (int) $schedule->patient_capacity) {
             throw new AppointmentBookingException(
-                'This schedule has reached its full patient capacity ('.$schedule->patient_capacity.' patients). Please choose another doctor or date.'
+                'This schedule has reached its full patient capacity (' . $schedule->patient_capacity . ' patients). Please choose another doctor or date.'
             );
         }
 
-        if ($schedule->slotConsumingAppointments()->where('appointment_time', 'like', $time.'%')->exists()) {
+        if ($schedule->slotConsumingAppointments()->where('appointment_time', 'like', $time . '%')->exists()) {
             throw new AppointmentBookingException('That time slot was just booked by another patient. Please choose another slot.');
         }
 
@@ -57,11 +58,9 @@ class AppointmentBookingService
             ->exists();
 
         if ($alreadyBooked) {
-            throw new AppointmentBookingException('You already have an active appointment with this doctor on '.$date.'.');
+            throw new AppointmentBookingException('You already have an active appointment with this doctor on ' . $date . '.');
         }
 
-        // `contact_phone` / `checked_in_at` only exist after the attendance
-        // migration has run. Never let a missing column become a 500 error.
         $hasContactPhone = Appointment::hasDatabaseColumn('contact_phone');
         $hasCheckedIn = Appointment::hasDatabaseColumn('checked_in_at');
 
@@ -88,15 +87,12 @@ class AppointmentBookingService
             unset($appointment->checked_in_at);
         }
 
-        return ['schedule' => $schedule, 'appointment' => $appointment->load(['doctor', 'clinic'])];
+        // Load relationships required for the notification and the return payload
+        $appointment->load(['doctor', 'clinic', 'patient']);
+
+        return ['schedule' => $schedule, 'appointment' => $appointment];
     }
 
-    /**
-     * Mark arrival for an active appointment (admin / receptionist / clinic).
-     *
-     * The patient is asked for a rating as soon as they are marked as arrived,
-     * so feedback is captured at the end of the visit rather than forgotten.
-     */
     public function checkIn(Appointment $appointment): Appointment
     {
         if ($appointment->status !== Appointment::STATUS_ACTIVE) {
@@ -142,12 +138,6 @@ class AppointmentBookingService
         return $appointment;
     }
 
-    /**
-     * Send the "rate your doctor" notification exactly once per appointment.
-     *
-     * The `rating_request_sent_at` stamp makes the call idempotent, so both the
-     * check-in and the completion flow can safely trigger it.
-     */
     protected function requestRating(Appointment $appointment): void
     {
         if (! Appointment::hasDatabaseColumn('rating_request_sent_at')) {

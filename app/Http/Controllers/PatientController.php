@@ -187,8 +187,7 @@ class PatientController extends Controller
             ->route('patient.dashboard')
             ->with('success', 'Appointment booked with Dr. '.$appointment->doctor->full_name.' at '.($clinic?->clinic_name ?? 'the clinic').' on '.$appointment->appointment_date->format('d M Y').' at '.$appointment->formatted_time.'.'
                 .($emailSent
-                    ? ' A confirmation email was sent to '.$patient->email
-                        .($appointment->notification_phone ? ' and an SMS to '.$appointment->notification_phone.'.' : '.')
+                    ? ' A confirmation email was sent to '.$patient->email.'.'
                     : ' We could not send the confirmation email — please check the mail configuration.'));
     }
 

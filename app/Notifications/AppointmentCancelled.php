@@ -3,8 +3,6 @@
 namespace App\Notifications;
 
 use App\Models\Appointment;
-use App\Notifications\Channels\SmsChannel;
-use App\Support\Sms\SmsMessage;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -21,16 +19,11 @@ class AppointmentCancelled extends Notification implements ShouldQueue
     ) {}
 
     /**
-     * SMS is attempted before mail because it can never throw (the channel
-     * swallows gateway errors). Laravel aborts the channel loop on the first
-     * exception, so putting mail first would mean a broken SMTP server also
-     * suppresses the SMS.
-     *
      * @return array<int, string>
      */
     public function via(object $notifiable): array
     {
-        return [SmsChannel::class, 'mail', 'database'];
+        return ['mail', 'database'];
     }
 
     public function toMail(object $notifiable): MailMessage
@@ -65,26 +58,5 @@ class AppointmentCancelled extends Notification implements ShouldQueue
             'cancelled_by' => $this->cancelledBy,
             'automatic' => $this->automatic,
         ];
-    }
-
-    /**
-     * SMS warning that the slot is no longer booked.
-     */
-    public function toSms(object $notifiable): ?SmsMessage
-    {
-        $appointment = $this->appointment;
-        $actor = $this->cancelledBy === 'patient' ? 'by you' : 'by the clinic';
-
-        return new SmsMessage(
-            $appointment->notification_phone ?? '',
-            sprintf(
-                '%s: your appointment with Dr. %s on %s at %s was cancelled %s. Please rebook if you still need care.',
-                config('app.name'),
-                $appointment->doctor->full_name,
-                $appointment->appointment_date->format('d M Y'),
-                $appointment->formatted_time,
-                $actor
-            )
-        );
     }
 }

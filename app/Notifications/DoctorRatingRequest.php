@@ -3,8 +3,6 @@
 namespace App\Notifications;
 
 use App\Models\Appointment;
-use App\Notifications\Channels\SmsChannel;
-use App\Support\Sms\SmsMessage;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -17,16 +15,11 @@ class DoctorRatingRequest extends Notification implements ShouldQueue
     public function __construct(public Appointment $appointment) {}
 
     /**
-     * SMS is attempted before mail because it can never throw (the channel
-     * swallows gateway errors). Laravel aborts the channel loop on the first
-     * exception, so putting mail first would mean a broken SMTP server also
-     * suppresses the SMS.
-     *
      * @return array<int, string>
      */
     public function via(object $notifiable): array
     {
-        return [SmsChannel::class, 'mail', 'database'];
+        return ['mail', 'database'];
     }
 
     public function toMail(object $notifiable): MailMessage
@@ -57,24 +50,5 @@ class DoctorRatingRequest extends Notification implements ShouldQueue
             'message' => 'Rate your doctor and share your experience.',
             'url' => route('patient.appointments.review.create', $this->appointment),
         ];
-    }
-
-    /**
-     * SMS asking the patient to leave a rating once the checkup is done.
-     */
-    public function toSms(object $notifiable): ?SmsMessage
-    {
-        $appointment = $this->appointment;
-
-        return new SmsMessage(
-            $appointment->notification_phone ?? '',
-            sprintf(
-                '%s: thank you for visiting Dr. %s (%s). Please rate your doctor and share your experience: %s',
-                config('app.name'),
-                $appointment->doctor->full_name,
-                $appointment->doctor->specialization,
-                route('patient.appointments.review.create', $appointment)
-            )
-        );
     }
 }

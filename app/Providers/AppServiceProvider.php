@@ -6,9 +6,6 @@ use App\Models\Admin;
 use App\Models\Clinic;
 use App\Models\Doctor;
 use App\Models\Patient;
-use App\Support\Sms\LogSmsGateway;
-use App\Support\Sms\SmsGateway;
-use App\Support\Sms\TwilioSmsGateway;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\ServiceProvider;
@@ -20,12 +17,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        $this->app->singleton(SmsGateway::class, function ($app): SmsGateway {
-            return match ((string) config('sms.driver', 'log')) {
-                'twilio' => $app->make(TwilioSmsGateway::class),
-                default => $app->make(LogSmsGateway::class),
-            };
-        });
     }
 
     /**
