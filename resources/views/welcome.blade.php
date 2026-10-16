@@ -4,27 +4,39 @@
 
 @section('content')
 
-    {{-- New doctor promotions + clinic discount offers (single slider) ------ --}}
-    <div class="container mt-4">
+    <div class="hms-landing">
+
+    {{-- 1. Hero first -------------------------------------------------------- --}}
+    @include('partials.home_hero')
+
+    {{-- 2. Offers + new doctors --------------------------------------------- --}}
+    @if ($announcements->isNotEmpty() || $offers->isNotEmpty())
+    <div class="container mt-5">
+        <div class="hms-section-head">
+            <div>
+                <span class="hms-eyebrow"><i class="bi bi-megaphone-fill"></i>What's new</span>
+                <h2>Offers &amp; new doctors</h2>
+                <p>Latest announcements and limited-period discounts from approved clinics.</p>
+            </div>
+        </div>
         @include('partials.promo_slider')
     </div>
-
-    {{-- Clinic directory ---------------------------------------------------- --}}
+    @endif
+    {{-- 3. Clinic directory -------------------------------------------------- --}}
     <div class="container mt-5">
-        <div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-3">
+        <div class="hms-section-head">
             <div>
-                <h2 class="h4 mb-1">
+                <span class="hms-eyebrow"><i class="bi bi-hospital"></i>Find care</span>
+                <h2>
                     @if ($area)
                         Clinics in &ldquo;{{ $area }}&rdquo;
                     @else
                         Clinic directory
                     @endif
                 </h2>
-                <p class="text-muted mb-0 small">
-                    Only clinics approved by an administrator can accept appointments.
-                </p>
+                <p>Only clinics approved by an administrator can accept appointments.</p>
             </div>
-            <a href="{{ route('clinics.index', array_filter(['area' => $area])) }}" class="btn btn-sm btn-outline-hms">
+            <a href="{{ route('clinics.index', array_filter(['area' => $area])) }}" class="btn btn-hms">
                 Browse all clinics <i class="bi bi-arrow-right ms-1"></i>
             </a>
         </div>
@@ -32,32 +44,28 @@
         <div class="row g-3">
             @forelse ($clinics as $clinic)
                 <div class="col-md-6 col-xl-4">
-                    <div class="hms-card h-100">
-                        <div class="hms-card__body d-flex flex-column h-100">
-                            <div class="d-flex align-items-start gap-3 mb-2">
-                                <span class="hms-avatar"><i class="bi bi-hospital"></i></span>
-                                <div class="flex-grow-1">
-                                    <h3 class="h6 mb-1">{{ $clinic->clinic_name }}</h3>
-                                    <div class="text-muted small">
-                                        <i class="bi bi-geo-alt me-1"></i>{{ $clinic->area }}
-                                    </div>
+                    <div class="hms-clinic-card h-100">
+                        <div class="hms-clinic-card__top">
+                            <span class="hms-clinic-card__icon"><i class="bi bi-hospital"></i></span>
+                            <div class="flex-grow-1 min-w-0">
+                                <h3>{{ $clinic->clinic_name }}</h3>
+                                <div class="hms-clinic-card__area">
+                                    <i class="bi bi-geo-alt me-1"></i>{{ $clinic->area }}
                                 </div>
-                                <x-status-badge :status="$clinic->status" />
                             </div>
-
-                            <div class="small text-muted mb-3">
-                                <div><i class="bi bi-telephone me-1"></i>{{ $clinic->contact_number }}</div>
-                                <div class="text-truncate"><i class="bi bi-envelope me-1"></i>{{ $clinic->email }}</div>
-                            </div>
-
-                            <div class="mt-auto d-flex align-items-center justify-content-between gap-2">
-                                <span class="hms-chip">
-                                    <i class="bi bi-calendar3"></i>{{ $clinic->schedules_count }} published
-                                </span>
-                                <a href="{{ route('patient.clinics.doctors', $clinic) }}" class="btn btn-sm btn-hms">
-                                    View doctors
-                                </a>
-                            </div>
+                            <x-status-badge :status="$clinic->status" />
+                        </div>
+                        <div class="hms-clinic-card__contact">
+                            <div><i class="bi bi-telephone me-1"></i>{{ $clinic->contact_number }}</div>
+                            <div class="text-truncate"><i class="bi bi-envelope me-1"></i>{{ $clinic->email }}</div>
+                        </div>
+                        <div class="hms-clinic-card__foot">
+                            <span class="hms-chip">
+                                <i class="bi bi-calendar3"></i>{{ $clinic->schedules_count }} published
+                            </span>
+                            <a href="{{ route('patient.clinics.doctors', $clinic) }}" class="btn btn-sm btn-hms">
+                                View doctors
+                            </a>
                         </div>
                     </div>
                 </div>
@@ -75,63 +83,94 @@
         </div>
     </div>
 
-    {{-- How it works -------------------------------------------------------- --}}
+    {{-- 4. How it works ------------------------------------------------------ --}}
     <div class="container mt-5">
+        <div class="hms-section-head text-center justify-content-center">
+            <div>
+                <span class="hms-eyebrow"><i class="bi bi-magic"></i>How it works</span>
+                <h2>Care in three simple steps</h2>
+                <p>No phone calls. No queues. Just pick clinic, doctor and slot.</p>
+            </div>
+        </div>
         <div class="row g-3">
             <div class="col-md-4">
-                <div class="hms-feature">
-                    <i class="bi bi-geo-alt"></i>
-                    <div>
-                        <h6>1. Search by area</h6>
-                        <p>Filter our directory of approved clinics by the area you live in.</p>
-                    </div>
+                <div class="hms-step-card">
+                    <span class="hms-step-card__num">01</span>
+                    <span class="hms-step-card__icon"><i class="bi bi-geo-alt"></i></span>
+                    <h6>Search by area</h6>
+                    <p>Filter approved clinics by the area you live in.</p>
                 </div>
             </div>
             <div class="col-md-4">
-                <div class="hms-feature">
-                    <i class="bi bi-person-badge"></i>
-                    <div>
-                        <h6>2. Pick doctor &amp; slot</h6>
-                        <p>See the doctors on duty and the exact slots still available that day.</p>
-                    </div>
+                <div class="hms-step-card">
+                    <span class="hms-step-card__num">02</span>
+                    <span class="hms-step-card__icon"><i class="bi bi-person-badge"></i></span>
+                    <h6>Pick doctor &amp; slot</h6>
+                    <p>See doctors on duty and exact slots still available.</p>
                 </div>
             </div>
             <div class="col-md-4">
-                <div class="hms-feature">
-                    <i class="bi bi-file-medical"></i>
-                    <div>
-                        <h6>3. Collect your prescription</h6>
-                        <p>After the visit your prescription can be viewed and printed online.</p>
+                <div class="hms-step-card">
+                    <span class="hms-step-card__num">03</span>
+                    <span class="hms-step-card__icon"><i class="bi bi-file-medical"></i></span>
+                    <h6>Collect prescription</h6>
+                    <p>After the visit view and print your prescription online.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- 5. Best doctors -------------------------------------------------------- --}}
+    @include('partials.best_doctors')
+
+    {{-- 6. Portals ------------------------------------------------------------ --}}
+    <div class="container mt-5">
+        <div class="hms-portals">
+            <div class="row g-3 align-items-center">
+                <div class="col-lg-5">
+                    <span class="hms-eyebrow"><i class="bi bi-grid-1x2-fill"></i>One platform</span>
+                    <h2 class="mt-2">Everyone connects here</h2>
+                    <p class="mb-0">Patients book visits, clinics publish schedules, doctors manage consultations.</p>
+                </div>
+                <div class="col-lg-7">
+                    <div class="row g-2">
+                        <div class="col-sm-4">
+                            <a href="{{ route('patient.login') }}" class="hms-portal-link">
+                                <i class="bi bi-person-heart"></i><strong>Patient</strong><small>Book &amp; track visits</small>
+                            </a>
+                        </div>
+                        <div class="col-sm-4">
+                            <a href="{{ route('clinic.login') }}" class="hms-portal-link">
+                                <i class="bi bi-hospital"></i><strong>Clinic</strong><small>Schedules &amp; doctors</small>
+                            </a>
+                        </div>
+                        <div class="col-sm-4">
+                            <a href="{{ route('doctor.login') }}" class="hms-portal-link">
+                                <i class="bi bi-person-badge"></i><strong>Doctor</strong><small>Consults &amp; Rx</small>
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    {{-- Hero (premium redesign, same palette as before) ------------------ --}}
-    @include('partials.home_hero')
-
-    {{-- Best doctors chosen by the public ------------------------------- --}}
-    @include('partials.best_doctors')
-
-    {{-- Contact us ---------------------------------------------------------- --}}
+    {{-- 7. Contact ------------------------------------------------------------ --}}
     <div class="container mt-5" id="contact">
-        <div class="hms-card">
+        <div class="hms-contact">
             <div class="row g-0">
-                <div class="col-lg-5 p-4 p-lg-5" style="background: linear-gradient(160deg, #101828, #312e81); border-radius: 16px 0 0 16px;">
-                    <h2 class="h4 text-white mb-2">Contact us</h2>
-                    <p class="text-white-50 small mb-4">
-                        Send us a message and the hospital administration team will get back to you.
-                        Every submission is stored in the system queries register.
-                    </p>
-                    <ul class="list-unstyled small text-white-50 mb-0">
-                        <li class="mb-2"><i class="bi bi-clock-history me-2"></i>Responses within 1 working day</li>
-                        <li class="mb-2"><i class="bi bi-geo-alt me-2"></i>Area-wise clinic network</li>
-                        <li><i class="bi bi-shield-check me-2"></i>Your details are only used to answer your query</li>
+                <div class="col-lg-5 hms-contact__side">
+                    <span class="hms-eyebrow hms-eyebrow--on-teal"><i class="bi bi-chat-dots-fill"></i>Contact us</span>
+                    <h2 class="mt-2">We're here to help</h2>
+                    <p>Send a message and the hospital administration team will get back to you.</p>
+                    <ul>
+                        <li><i class="bi bi-clock-history"></i>Responses within 1 working day</li>
+                        <li><i class="bi bi-geo-alt"></i>Area-wise clinic network</li>
+                        <li><i class="bi bi-shield-check"></i>Details only used to answer your query</li>
                     </ul>
                 </div>
 
-                <div class="col-lg-7 p-4 p-lg-5">
+                <div class="col-lg-7 hms-contact__form">
                     <form method="POST" action="{{ route('contact.store') }}">
                         @csrf
                         <div class="row g-3">
@@ -171,7 +210,7 @@
                                           required>{{ old('message') }}</textarea>
                             </div>
                             <div class="col-12">
-                                <button type="submit" class="btn btn-hms">
+                                <button type="submit" class="btn btn-hms btn-lg w-100">
                                     <i class="bi bi-send me-1"></i>Submit query
                                 </button>
                             </div>
@@ -181,6 +220,8 @@
             </div>
         </div>
     </div>
+
+</div>
 @endsection
 
 @push('scripts')

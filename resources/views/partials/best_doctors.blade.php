@@ -22,12 +22,11 @@
 
 @if ($topDoctors->isNotEmpty())
     <section class="container mt-5" aria-label="Doctors rated best by patients">
-        <div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-3">
+        <div class="hms-section-head">
             <div>
-                <h2 class="h4 mb-1">Chosen by patients</h2>
-                <p class="text-muted mb-0 small">
-                    These doctors carry the highest public rating after completed visits.
-                </p>
+                <span class="hms-eyebrow"><i class="bi bi-star-fill"></i>Top rated</span>
+                <h2>Chosen by patients</h2>
+                <p>Doctors with the highest public rating after completed visits.</p>
             </div>
             <span class="hms-chip"><i class="bi bi-star-fill"></i>{{ $topDoctors->count() }} rated doctors</span>
         </div>

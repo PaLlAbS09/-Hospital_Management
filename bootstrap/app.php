@@ -21,7 +21,6 @@ return Application::configure(basePath: dirname(__DIR__))
             'guest' => RedirectIfAuthenticated::class,
         ]);
 
-        // Unauthenticated visitors are always sent back to the public landing page.
         $middleware->redirectGuestsTo(fn (Request $request) => route('home'));
     })
     ->withExceptions(function (Exceptions $exceptions): void {
@@ -29,4 +28,3 @@ return Application::configure(basePath: dirname(__DIR__))
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );
     })->create();
-
