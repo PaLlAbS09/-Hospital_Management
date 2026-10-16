@@ -13,6 +13,11 @@ class Appointment extends Model
 {
     use HasFactory;
 
+    public function getRouteKeyName(): string
+    {
+        return $this->getKeyName();
+    }
+
     public static function hasDatabaseColumn(string $column): bool
     {
         try {

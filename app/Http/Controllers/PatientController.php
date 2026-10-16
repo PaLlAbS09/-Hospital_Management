@@ -217,15 +217,25 @@ class PatientController extends Controller
     /**
      * Rate a completed session and share the experience with other patients.
      */
-    public function review(Appointment $appointment): View
+    public function review(Appointment $appointment): View|RedirectResponse
     {
         $this->authorizeAppointment($appointment);
 
-        abort_unless($appointment->is_reviewable, 404, 'Only completed appointments can be rated.');
+        // Friendly redirects instead of bare 404s so the patient knows why
+        // the review page is unavailable (email link, wrong status, duplicate).
+        if (! $appointment->is_reviewable) {
+            return redirect()
+                ->route('patient.dashboard')
+                ->with('error', 'This appointment ('.$appointment->appointment_date->format('d M Y').' at '.$appointment->formatted_time.') is '.$appointment->status.' — only Completed visits can be rated.');
+        }
 
         $appointment->load(['doctor', 'clinic', 'review']);
 
-        abort_if($appointment->review !== null, 404, 'You have already reviewed this appointment.');
+        if ($appointment->review !== null) {
+            return redirect()
+                ->route('patient.dashboard')
+                ->with('info', 'You have already reviewed this appointment. Thank you!');
+        }
 
         return view('patient.review', [
             'appointment' => $appointment,

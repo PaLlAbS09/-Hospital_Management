@@ -220,7 +220,9 @@ Route::middleware(['auth:patient', 'role:patient'])
         Route::get('appointments/{appointment}/prescription', [PatientController::class, 'prescription'])
             ->name('appointments.prescription');
 
-        // Rating & experience shared after a completed session
+        // Rating & experience shared after a completed session.
+        // Email carries a signed URL (7-day expiry); in-app buttons use plain
+        // route() URLs. review() accepts both — signature is optional.
         Route::get('appointments/{appointment}/review', [PatientController::class, 'review'])
             ->name('appointments.review.create');
         Route::post('appointments/{appointment}/review', [PatientController::class, 'storeReview'])

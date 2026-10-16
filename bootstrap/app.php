@@ -21,7 +21,16 @@ return Application::configure(basePath: dirname(__DIR__))
             'guest' => RedirectIfAuthenticated::class,
         ]);
 
-        $middleware->redirectGuestsTo(fn (Request $request) => route('home'));
+        $middleware->redirectGuestsTo(function (Request $request) {
+            // Patients clicking the "Rate your visit" email link while logged out
+            // must land on the patient login (with ?next= back) instead of home,
+            // otherwise they see a confusing page and the review URL looks broken.
+            if ($request->is('patient/*')) {
+                return route('patient.login');
+            }
+
+            return route('home');
+        });
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
