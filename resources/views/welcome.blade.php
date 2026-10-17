@@ -41,46 +41,66 @@
             </a>
         </div>
 
-        <div class="row g-3">
-            @forelse ($clinics as $clinic)
-                <div class="col-md-6 col-xl-4">
-                    <div class="hms-clinic-card h-100">
-                        <div class="hms-clinic-card__top">
-                            <span class="hms-clinic-card__icon"><i class="bi bi-hospital"></i></span>
-                            <div class="flex-grow-1 min-w-0">
-                                <h3>{{ $clinic->clinic_name }}</h3>
-                                <div class="hms-clinic-card__area">
-                                    <i class="bi bi-geo-alt me-1"></i>{{ $clinic->area }}
+        @if ($clinics->isNotEmpty())
+            @php
+                // Swiper options consumed by `partials.swiper_init` via `data-hms-swiper`.
+                $clinicSwiperOptions = json_encode([
+                    'slidesPerView' => 1,
+                    'spaceBetween' => 20,
+                    'autoplay' => ['delay' => 4500, 'disableOnInteraction' => false],
+                    'breakpoints' => [
+                        '768' => ['slidesPerView' => 2],
+                        '1200' => ['slidesPerView' => 3],
+                    ],
+                ]);
+            @endphp
+            <section class="hms-slider hms-clinic-slider" aria-label="Clinic directory">
+                <div class="swiper" id="hms-clinic-slider" data-hms-swiper="{{ $clinicSwiperOptions }}">
+                    <div class="swiper-wrapper">
+                        @foreach ($clinics as $clinic)
+                            <div class="swiper-slide">
+                                <div class="hms-clinic-card h-100 w-100">
+                                    <div class="hms-clinic-card__top">
+                                        <span class="hms-clinic-card__icon"><i class="bi bi-hospital"></i></span>
+                                        <div class="flex-grow-1 min-w-0">
+                                            <h3>{{ $clinic->clinic_name }}</h3>
+                                            <div class="hms-clinic-card__area">
+                                                <i class="bi bi-geo-alt me-1"></i>{{ $clinic->area }}
+                                            </div>
+                                        </div>
+                                        <x-status-badge :status="$clinic->status" />
+                                    </div>
+                                    <div class="hms-clinic-card__contact">
+                                        <div><i class="bi bi-telephone me-1"></i>{{ $clinic->contact_number }}</div>
+                                        <div class="text-truncate"><i class="bi bi-envelope me-1"></i>{{ $clinic->email }}</div>
+                                    </div>
+                                    <div class="hms-clinic-card__foot">
+                                        <span class="hms-chip">
+                                            <i class="bi bi-calendar3"></i>{{ $clinic->schedules_count }} published
+                                        </span>
+                                        <a href="{{ route('patient.clinics.doctors', $clinic) }}" class="btn btn-sm btn-hms">
+                                            View doctors
+                                        </a>
+                                    </div>
                                 </div>
                             </div>
-                            <x-status-badge :status="$clinic->status" />
-                        </div>
-                        <div class="hms-clinic-card__contact">
-                            <div><i class="bi bi-telephone me-1"></i>{{ $clinic->contact_number }}</div>
-                            <div class="text-truncate"><i class="bi bi-envelope me-1"></i>{{ $clinic->email }}</div>
-                        </div>
-                        <div class="hms-clinic-card__foot">
-                            <span class="hms-chip">
-                                <i class="bi bi-calendar3"></i>{{ $clinic->schedules_count }} published
-                            </span>
-                            <a href="{{ route('patient.clinics.doctors', $clinic) }}" class="btn btn-sm btn-hms">
-                                View doctors
-                            </a>
-                        </div>
+                        @endforeach
                     </div>
+
+                    <div class="swiper-pagination"></div>
+                    <div class="swiper-button-prev"></div>
+                    <div class="swiper-button-next"></div>
                 </div>
-            @empty
-                <div class="col-12">
-                    <div class="hms-card">
-                        <div class="hms-empty">
-                            <i class="bi bi-search"></i>
-                            <p class="mb-1 fw-semibold">No approved clinics found{{ $area ? ' in '.$area : '' }}.</p>
-                            <p class="mb-0 small">Try a different area or browse the full directory.</p>
-                        </div>
-                    </div>
+            </section>
+        @else
+            <div class="hms-card">
+                <div class="hms-empty">
+                    <i class="bi bi-search"></i>
+                    <p class="mb-1 fw-semibold">No approved clinics found{{ $area ? ' in '.$area : '' }}.</p>
+                    <p class="mb-0 small">Try a different area or browse the full directory.</p>
                 </div>
-            @endforelse
-        </div>
+            </div>
+        @endif
     </div>
 
     {{-- 4. How it works ------------------------------------------------------ --}}

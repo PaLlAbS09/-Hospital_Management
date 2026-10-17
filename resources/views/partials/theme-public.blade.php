@@ -279,6 +279,14 @@
     .hms-slider .swiper-button-next::after,
     .hms-slider .swiper-button-prev::after { font-size: 1rem; font-weight: 800; }
 
+    /* ---------------------------------------------------------------
+     | Clinic directory slider (Swiper.js)
+     | ------------------------------------------------------------- */
+    .hms-clinic-slider .swiper { overflow: hidden; padding: 2px 2px 8px; }
+    .hms-clinic-slider .swiper-wrapper { align-items: stretch; }
+    .hms-clinic-slider .swiper-slide { height: auto; display: flex; }
+    .hms-clinic-slider .hms-clinic-card { flex: 1 1 auto; }
+
     .hms-promo {
         display: flex;
         width: 100%;
